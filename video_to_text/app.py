@@ -11,9 +11,9 @@ import math
 from flask import Flask, request, jsonify
 
 from scene_detect import scene_detect
+import os
 
-
-
+CACHE_DIR = "json_cached"
 model_name_or_path = "Salesforce/xgen-mm-vid-phi3-mini-r-v1.5-128tokens-8frames"
 model = AutoModelForVision2Seq.from_pretrained(model_name_or_path, trust_remote_code=True)
 tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True, use_fast=False, legacy=False)
@@ -115,6 +115,17 @@ def entire_video():
         if not video_path:
             return jsonify({"error: missing video_path"}), 400
         
+        video_id = video_path.split('/')[-1].split('.')[0]
+        cache_file = os.path.join(CACHE_DIR, f"{video_id}.json")
+
+        # 캐싱된 파일이 있는지 확인
+        if os.path.exists(cache_file):
+            with open(cache_file, 'r') as f:
+                cached_data = json.load(f)
+            return jsonify(cached_data)
+
+
+
         res = []
 
         
@@ -127,7 +138,7 @@ def entire_video():
             )
             result = predict(vframes)
             res.append({
-                'video_id':f"{video_path.split('/')[-1].split('.')[0]}_{i}",
+                'video_id': f"{video_id}_{i}",
                 'captions':result,
                 'timestamps':{
                     'start': start,
@@ -135,10 +146,17 @@ def entire_video():
                 } 
             })
         
-        return jsonify({
+        response_data = {
                 'video_path':video_path,
                 'segments':res
-            })
+            }
+
+        
+        
+        with open(cache_file, 'w') as f:
+            json.dump(response_data, f)
+
+        return jsonify(response_data)
     
     except Exception as e:
         return jsonify({'error' : str(e)}), 500
