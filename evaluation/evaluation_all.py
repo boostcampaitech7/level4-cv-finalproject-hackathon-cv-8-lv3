@@ -9,7 +9,7 @@ from scipy import stats
 from scipy.stats import pearsonr
 
 def calculate_pearson_correlation(predictions_file, references_file):
-    # 파일 로드
+    # 파일 로드 
     with open(predictions_file, 'r') as f:
         predictions = json.load(f)
     with open(references_file, 'r') as f:
