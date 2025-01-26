@@ -20,6 +20,10 @@ __pycache__
 *.json
 *.mp4
 
+# Include package.json and package-lock.json
+!package.json
+!package-lock.json
+
 # wandb
 wandb/
 mmseg_base/work-dirs/
