@@ -18,7 +18,8 @@ module.exports = {
     },
     ecmaVersion: 'latest',
     sourceType: 'module',
-    project: './tsconfig.json',
+    project:
+      '/Users/johyewon/Desktop/BoostCamp/TVING/level4-cv-finalproject-hackathon-cv-8-lv3/demo-fe/tsconfig.json',
   },
   plugins: ['react', '@typescript-eslint', 'prettier', 'promise'],
   rules: {
