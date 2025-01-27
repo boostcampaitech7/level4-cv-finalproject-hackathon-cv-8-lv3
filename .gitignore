@@ -33,4 +33,4 @@ mmseg_base/work-dirs/
 mmseg_base/__pycache__/
 
 chroma.log
-database/*
+vectorDB/database/*
