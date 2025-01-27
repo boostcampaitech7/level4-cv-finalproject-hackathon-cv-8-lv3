@@ -34,3 +34,4 @@ mmseg_base/__pycache__/
 
 chroma.log
 vectorDB/database/*
+!vectorDB/database/
