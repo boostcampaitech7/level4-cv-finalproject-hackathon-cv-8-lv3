@@ -1,47 +1,17 @@
 import type React from 'react';
 import { useState } from 'react';
+import {
+  Container,
+  Title,
+  Input,
+  Button,
+  FileInputWrapper,
+  FileInput,
+  RadioGroup,
+  RadioLabel,
+  RadioInput,
+} from '../styles/SharedStyles';
 import styled from 'styled-components';
-
-const Container = styled.div`
-  background-color: ${({ theme }) => theme.colors.inputBg};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  padding: ${({ theme }) => theme.spacing.large};
-`;
-
-const Title = styled.h2`
-  font-size: ${({ theme }) => theme.fontSizes.large};
-  margin-bottom: ${({ theme }) => theme.spacing.medium};
-`;
-
-const Input = styled.input`
-  width: 80%;
-  padding: ${({ theme }) => theme.spacing.medium};
-  margin-bottom: ${({ theme }) => theme.spacing.medium};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  background-color: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.text};
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-`;
-
-const Button = styled.button`
-  padding: ${({ theme }) => theme.spacing.medium}
-    ${({ theme }) => theme.spacing.large};
-  background-color: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.text};
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius};
-  cursor: pointer;
-  transition: background-color 0.3s;
-
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.secondary};
-  }
-
-  &:disabled {
-    background-color: ${({ theme }) => theme.colors.disabled};
-    cursor: not-allowed;
-  }
-`;
 
 const ResultContainer = styled.div`
   margin-top: ${({ theme }) => theme.spacing.large};
@@ -64,32 +34,7 @@ const Image = styled.img`
   margin-top: ${({ theme }) => theme.spacing.medium};
 `;
 
-const FileInputWrapper = styled.label`
-  display: block;
-  width: 80%;
-  padding: ${({ theme }) => theme.spacing.medium};
-  margin-bottom: ${({ theme }) => theme.spacing.medium};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  background-color: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.text};
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-  cursor: pointer;
-  text-align: center;
-  font-size: ${({ theme }) => theme.fontSizes.medium};
-  margin-bottom: ${({ theme }) => theme.spacing.medium};
-
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.primary};
-  }
-
-  transition: background-color 0.3s;
-`;
-
-const FileInput = styled.input`
-  display: none;
-`;
-
-function VideoToText() {
+function VideoToTextSearch() {
   const [videoId, setVideoId] = useState('');
   const [timestamp, setTimestamp] = useState('');
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -101,6 +46,7 @@ function VideoToText() {
       frameUrl: string;
     }[]
   >([]);
+  const [videoType, setVideoType] = useState<'unseen' | 'seen'>('unseen');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -109,10 +55,14 @@ function VideoToText() {
   };
 
   const handleSearch = () => {
-    const currentVideoId = videoFile ? videoFile.name : videoId;
+    const currentVideoId = videoType === 'unseen' ? 'unseen' : videoId;
 
-    if (!currentVideoId || !timestamp) {
-      alert('Please provide both a video ID and timestamp.');
+    if (
+      !timestamp ||
+      (videoType === 'seen' && !videoId) ||
+      (videoType === 'unseen' && !videoFile)
+    ) {
+      alert('Please provide all required information.');
       return;
     }
 
@@ -133,14 +83,38 @@ function VideoToText() {
 
   return (
     <Container>
-      <Title>Video to Text</Title>
+      <Title>Video to Text Search</Title>
 
-      <Input
-        type="text"
-        placeholder="Enter Video ID"
-        value={videoId}
-        onChange={(e) => setVideoId(e.target.value)}
-      />
+      <RadioGroup>
+        <RadioLabel>
+          <RadioInput
+            type="radio"
+            value="unseen"
+            checked={videoType === 'unseen'}
+            onChange={() => setVideoType('unseen')}
+          />
+          Unseen Video
+        </RadioLabel>
+        <RadioLabel>
+          <RadioInput
+            type="radio"
+            value="seen"
+            checked={videoType === 'seen'}
+            onChange={() => setVideoType('seen')}
+          />
+          Seen Video
+        </RadioLabel>
+      </RadioGroup>
+
+      {videoType === 'seen' && (
+        <Input
+          type="text"
+          placeholder="Enter Video ID"
+          value={videoId}
+          onChange={(e) => setVideoId(e.target.value)}
+        />
+      )}
+
       <Input
         type="text"
         placeholder="Enter Timestamp"
@@ -148,17 +122,27 @@ function VideoToText() {
         onChange={(e) => setTimestamp(e.target.value)}
       />
 
-      <FileInputWrapper htmlFor="fileInput">
-        {videoFile ? videoFile.name : 'Select a video file'}
-      </FileInputWrapper>
-      <FileInput
-        id="fileInput"
-        type="file"
-        onChange={handleFileChange}
-        accept="video/mp4, video/mpeg"
-      />
+      {videoType === 'unseen' && (
+        <FileInputWrapper htmlFor="fileInput">
+          {videoFile ? videoFile.name : 'Select a video file'}
+        </FileInputWrapper>
+      )}
+      {videoType === 'unseen' && (
+        <FileInput
+          id="fileInput"
+          type="file"
+          onChange={handleFileChange}
+          accept="video/mp4, video/mpeg"
+        />
+      )}
 
-      <Button onClick={handleSearch} disabled={!videoId || !timestamp}>
+      <Button
+        onClick={handleSearch}
+        disabled={
+          !timestamp ||
+          (videoType === 'seen' && !videoId) ||
+          (videoType === 'unseen' && !videoFile)
+        }>
         Search
       </Button>
 
@@ -168,17 +152,14 @@ function VideoToText() {
           {results.map((result) => (
             <ResultContainer key={`${result.videoId}-${result.timestamp}`}>
               <ResultText>
-                <strong>Video ID:</strong>
-                {result.videoId}
+                <strong>Video ID:</strong> {result.videoId}
                 <br />
-                <strong>Timestamp:</strong>
-                {result.timestamp}
+                <strong>Timestamp:</strong> {result.timestamp}
                 <br />
-                <strong>Result:</strong>
-                {result.resultText}
+                <strong>Result:</strong> {result.resultText}
               </ResultText>
               <Image
-                src={result.frameUrl}
+                src={result.frameUrl || '/placeholder.svg'}
                 alt={`Frame for ${result.timestamp}`}
               />
             </ResultContainer>
@@ -191,4 +172,4 @@ function VideoToText() {
   );
 }
 
-export default VideoToText;
+export default VideoToTextSearch;

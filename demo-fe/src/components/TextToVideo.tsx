@@ -1,47 +1,14 @@
 import type React from 'react';
 import { useState } from 'react';
+import {
+  Container,
+  Title,
+  Input,
+  Button,
+  FileInputWrapper,
+  FileInput,
+} from '../styles/SharedStyles';
 import styled from 'styled-components';
-
-const Container = styled.div`
-  background-color: ${({ theme }) => theme.colors.inputBg};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  padding: ${({ theme }) => theme.spacing.large};
-`;
-
-const Title = styled.h2`
-  font-size: ${({ theme }) => theme.fontSizes.large};
-  margin-bottom: ${({ theme }) => theme.spacing.medium};
-`;
-
-const Input = styled.input`
-  width: 80%;
-  padding: ${({ theme }) => theme.spacing.medium};
-  margin-bottom: ${({ theme }) => theme.spacing.medium};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  background-color: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.text};
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-`;
-
-const Button = styled.button`
-  padding: ${({ theme }) => theme.spacing.medium}
-    ${({ theme }) => theme.spacing.large};
-  background-color: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.text};
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius};
-  cursor: pointer;
-  transition: background-color 0.3s;
-
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.secondary};
-  }
-
-  &:disabled {
-    background-color: ${({ theme }) => theme.colors.disabled};
-    cursor: not-allowed;
-  }
-`;
 
 const ImageContainer = styled.div`
   display: grid;
@@ -82,32 +49,7 @@ const VideoClip = styled.video`
   border-radius: ${({ theme }) => theme.borderRadius};
 `;
 
-const FileInputWrapper = styled.label`
-  display: block;
-  width: 80%;
-  padding: ${({ theme }) => theme.spacing.medium};
-  margin-bottom: ${({ theme }) => theme.spacing.medium};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  background-color: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.text};
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-  cursor: pointer;
-  text-align: center;
-  font-size: ${({ theme }) => theme.fontSizes.medium};
-  margin-bottom: ${({ theme }) => theme.spacing.medium};
-
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.primary};
-  }
-
-  transition: background-color 0.3s;
-`;
-
-const FileInput = styled.input`
-  display: none;
-`;
-
-function TextToVideo() {
+function TextToVideoSearch() {
   const [query, setQuery] = useState('');
   const [videoFiles, setVideoFiles] = useState<File[]>([]);
   const [frames, setFrames] = useState<string[]>([]);
@@ -123,7 +65,7 @@ function TextToVideo() {
   const handleSearch = () => {
     console.log('Searching for:', query, videoFiles);
 
-    // 임시 데이터
+    // Simulated search results
     setFrames([
       'https://picsum.photos/seed/1/300/200',
       'https://picsum.photos/seed/2/300/200',
@@ -137,7 +79,7 @@ function TextToVideo() {
 
   return (
     <Container>
-      <Title>Text to Video</Title>
+      <Title>Text to Video Search</Title>
       <Input
         type="text"
         placeholder="Enter your search query"
@@ -146,7 +88,9 @@ function TextToVideo() {
       />
 
       <FileInputWrapper htmlFor="videoFiles">
-        Select video files
+        {videoFiles.length > 0
+          ? `${videoFiles.length} files selected`
+          : 'Select video files'}
       </FileInputWrapper>
       <FileInput
         id="videoFiles"
@@ -155,7 +99,11 @@ function TextToVideo() {
         multiple
         accept="video/mp4, video/mpeg"
       />
-      <Button onClick={handleSearch}>Search</Button>
+      <Button
+        onClick={handleSearch}
+        disabled={!query || videoFiles.length === 0}>
+        Search
+      </Button>
 
       {frames.length > 0 && (
         <div>
@@ -183,4 +131,4 @@ function TextToVideo() {
   );
 }
 
-export default TextToVideo;
+export default TextToVideoSearch;
