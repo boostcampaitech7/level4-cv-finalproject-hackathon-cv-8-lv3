@@ -3,21 +3,18 @@ import numpy as np
 import torchvision
 import librosa
 from transformers import Qwen2AudioForConditionalGeneration, AutoProcessor
-
 from flask import Flask, request, jsonify
-
+from flasgger import Swagger
 from scene_detect import scene_detect
 import os
-
-CACHE_DIR = "json_cached"
-
+import uuid
 # 모델과 프로세서 초기화
 processor = AutoProcessor.from_pretrained("Qwen/Qwen2-Audio-7B-Instruct")
 model = Qwen2AudioForConditionalGeneration.from_pretrained("Qwen/Qwen2-Audio-7B-Instruct", device_map="auto", torch_dtype="auto")
 model.tie_weights()
 
 app = Flask(__name__)
-
+swagger = Swagger(app)
 
 def sample_frames(vframes, num_frames):
     print('len vframe: ', len(vframes), 'num_frames: ', num_frames)
@@ -29,7 +26,6 @@ def sample_frames(vframes, num_frames):
         video_list.append(torchvision.transforms.functional.to_pil_image(video[i]))
 
     return video_list
-
 
 def get_audio_caption(video_path, time_ranges):   
     # time_ranges는 [(start1, end1), (start2, end2), ...] 형태의 리스트
@@ -130,29 +126,105 @@ def get_audio_caption(video_path, time_ranges):
     
     return all_responses
 
-
 @app.route('/entire_video', methods=['POST'])
 def entire_video():
+    """
+    전체 비디오의 오디오 캡션을 생성합니다.
+    ---
+    tags:
+      - Audio Caption API
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            video_path:
+              type: string
+              description: 비디오 파일의 경로
+            timestamps:
+              type: array
+              description: 시작/종료 시간 리스트
+              items:
+                type: object
+                properties:
+                  start:
+                    type: number
+                    description: 시작 시간(초)
+                  end:
+                    type: number
+                    description: 종료 시간(초)
+    responses:
+      200:
+        description: 성공적으로 캡션이 생성됨
+        schema:
+          type: object
+          properties:
+            video_path:
+              type: string
+              description: 입력받은 비디오 파일 경로
+            segments:
+              type: array
+              description: 구간별 오디오 캡션 정보
+              items:
+                type: object
+                properties:
+                  video_id:
+                    type: string
+                    description: 구간별 고유 ID
+                  audio_caption:
+                    type: string
+                    description: 생성된 오디오 캡션 텍스트
+                  timestamps:
+                    type: object
+                    description: 구간의 시작/종료 시간 정보
+                    properties:
+                      start:
+                        type: number
+                        description: 시작 시간(초)
+                      end:
+                        type: number
+                        description: 종료 시간(초)
+      400:
+        description: 잘못된 요청
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: 에러 메시지
+      500:
+        description: 서버 에러
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: 에러 메시지
+    """
     try:
         video_path = request.json.get('video_path')
+        timestamps = request.json.get('timestamps')
+        
         if not video_path:
-            return jsonify({"error: missing video_path"}), 400
+            return jsonify({"error": "missing video_path"}), 400
+            
+        if not timestamps or len(timestamps) == 0:
+            return jsonify({"error": "missing timestamps or empty timestamps list"}), 400
         
         video_id = video_path.split('/')[-1].split('.')[0]
-        cache_file = os.path.join(CACHE_DIR, f"{video_id}.json")
 
-        # 캐싱된 파일이 있는지 확인
-        if os.path.exists(cache_file):
-            with open(cache_file, 'r') as f:
-                cached_data = json.load(f)
-            return jsonify(cached_data)
-
-        scenes = scene_detect(video_path)
-        print(scenes)
-        
-        # 각 장면에 대한 오디오 캡션 생성
+        # timestamps 리스트를 이용해 오디오 캡션 생성
+        scenes = [(ts['start_time'], ts['end_time']) for ts in timestamps]
+        if not scenes:
+            return jsonify({"error": "invalid timestamps format"}), 400
+            
         audio_captions = get_audio_caption(video_path, scenes)
         
+        if not audio_captions:
+            return jsonify({"error": "failed to generate audio captions"}), 500
+            
         res = []
         for i, caption_data in enumerate(audio_captions):
             res.append({
@@ -169,9 +241,6 @@ def entire_video():
             'segments': res
         }
 
-        with open(cache_file, 'w') as f:
-            json.dump(response_data, f)
-
         return jsonify(response_data)
     
     except Exception as e:
@@ -180,6 +249,44 @@ def entire_video():
 
 @app.route('/short_video', methods=['POST'])
 def short_video():
+    """
+    지정된 구간의 비디오 오디오 캡션을 생성합니다.
+    ---
+    tags:
+      - Audio Caption API
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            video_path:
+              type: string
+              description: 비디오 파일의 경로
+            start:
+              type: number
+              description: 시작 시간(초)
+            end:
+              type: number
+              description: 종료 시간(초)
+    responses:
+      200:
+        description: 성공적으로 캡션이 생성됨
+        schema:
+          type: object
+          properties:
+            result:
+              type: string
+            start:
+              type: number
+            end:
+              type: number
+      400:
+        description: 잘못된 요청
+      500:
+        description: 서버 에러
+    """
     try:
         video_path = request.json.get('video_path')
         if not video_path:
@@ -207,8 +314,83 @@ def short_video():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/upload_video', methods=['POST'])
+def upload_video():
+    """
+    비디오 파일을 업로드하고 저장하는 API
+    ---
+    tags:
+      - name: 비디오 업로드
+        description: 비디오 파일 업로드 관련 API
+    consumes:
+      - multipart/form-data
+    produces:
+      - application/json
+    parameters:
+      - in: formData
+        name: video
+        type: file
+        required: true
+        description: 업로드할 비디오 파일
+    responses:
+      200:
+        description: 비디오 업로드 성공
+        schema:
+          type: object
+          properties:
+            video_path:
+              type: string
+              description: 저장된 비디오 파일 경로
+              example: "/home/edddd/data/video.mp4"
+      400:
+        description: 잘못된 요청
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: 에러 메시지
+              example: "비디오 파일이 필요합니다"
+      500:
+        description: 서버 에러
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: 에러 메시지
+              example: "Internal server error"
+    """
+    try:
+        if 'video' not in request.files:
+            return jsonify({"error": "비디오 파일이 필요합니다"}), 400
+            
+        video_file = request.files['video']
+        if video_file.filename == '':
+            return jsonify({"error": "선택된 파일이 없습니다"}), 400
+            
+        # 파일 저장 경로 설정
+        save_dir = '/data/ephemeral/home/data/'
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # UUID를 사용하여 고유한 파일명 생성
+        
+        file_extension = os.path.splitext(video_file.filename)[1]
+        filename = str(uuid.uuid4()) + file_extension
+        file_path = os.path.join(save_dir, filename)
+        
+        # 파일 저장
+        video_file.save(file_path)
+        
+        return jsonify({
+            "video_path": file_path
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 
 #change to available port
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=30742)
+    app.run(host="0.0.0.0", port=30076)
