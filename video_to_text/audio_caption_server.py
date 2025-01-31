@@ -8,6 +8,12 @@ from flasgger import Swagger
 from scene_detect import scene_detect
 import os
 import uuid
+import warnings
+
+# 경고 메시지 무시 설정
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
+
 # 모델과 프로세서 초기화
 processor = AutoProcessor.from_pretrained("Qwen/Qwen2-Audio-7B-Instruct")
 model = Qwen2AudioForConditionalGeneration.from_pretrained("Qwen/Qwen2-Audio-7B-Instruct", device_map="auto", torch_dtype="auto")
@@ -98,12 +104,16 @@ def get_audio_caption(video_path, time_ranges):
             if isinstance(message["content"], list):
                 for ele in message["content"]:
                     if ele["type"] == "audio":
-                        # 지정된 시간 범위의 오디오 로드
-                        audio, sr = librosa.load(ele['audio_url'], 
-                                              sr=processor.feature_extractor.sampling_rate,
-                                              offset=start_time,
-                                              duration=end_time-start_time)
-                        audios.append(audio)
+                        try:
+                            # 지정된 시간 범위의 오디오 로드
+                            audio, sr = librosa.load(ele['audio_url'], 
+                                                  sr=processor.feature_extractor.sampling_rate,
+                                                  offset=start_time,
+                                                  duration=end_time-start_time)
+                            audios.append(audio)
+                        except Exception as e:
+                            print(f"Audio loading error: {str(e)}")
+                            continue
 
         # 입력 처리
         inputs = processor(text=text, audios=audios, return_tensors="pt", padding=True, 
@@ -111,7 +121,7 @@ def get_audio_caption(video_path, time_ranges):
         inputs = {k: v.to(model.device) for k, v in inputs.items()}
 
         # 텍스트 생성
-        generate_ids = model.generate(**inputs, max_length=2048)
+        generate_ids = model.generate(**inputs, max_length=4096)
         generate_ids = generate_ids[:, inputs["input_ids"].size(1):]
 
         # 결과 디코딩 및 반환
@@ -123,7 +133,8 @@ def get_audio_caption(video_path, time_ranges):
             "end_time": end_time,
             "caption": response
         })
-    
+        
+    print('all_responses: ', all_responses)
     return all_responses
 
 @app.route('/entire_video', methods=['POST'])
@@ -149,10 +160,10 @@ def entire_video():
               items:
                 type: object
                 properties:
-                  start:
+                  start_time:
                     type: number
                     description: 시작 시간(초)
-                  end:
+                  end_time:
                     type: number
                     description: 종료 시간(초)
     responses:
@@ -163,7 +174,7 @@ def entire_video():
           properties:
             video_path:
               type: string
-              description: 입력받은 비디오 파일 경로
+              description: 입력받한 비디오 파일 경로
             segments:
               type: array
               description: 구간별 오디오 캡션 정보
@@ -203,6 +214,7 @@ def entire_video():
               type: string
               description: 에러 메시지
     """
+    print('entire_video 불려짐.')
     try:
         video_path = request.json.get('video_path')
         timestamps = request.json.get('timestamps')
@@ -221,7 +233,7 @@ def entire_video():
             return jsonify({"error": "invalid timestamps format"}), 400
             
         audio_captions = get_audio_caption(video_path, scenes)
-        
+        print('audio_captions: ', audio_captions)
         if not audio_captions:
             return jsonify({"error": "failed to generate audio captions"}), 500
             
