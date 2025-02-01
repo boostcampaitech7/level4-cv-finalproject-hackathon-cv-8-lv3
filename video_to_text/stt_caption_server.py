@@ -6,6 +6,7 @@ import os
 import uuid
 from whisper import load_model
 from whisper.audio import load_audio
+import string
 
 # 모델 초기화 
 model = load_model("turbo", device="cuda", download_root=None)
@@ -54,12 +55,18 @@ def get_stt_caption(video_path: str, time_ranges: list) -> list:
                 logprob_threshold=-2.0,
                 no_speech_threshold=0.95
             )
-            print(f"디버그 - STT 결과: {result}")  # 디버그용 출력 추가
+            print(f"디버그 - STT 결과: {result}")  # 디버그용 출력
+            
+            # 결과 텍스트 추출 후 불필요한 정보 판별
+            caption_text = result.get("text", "").strip()
+            # 구두점만 포함되어 있거나, 공백 혹은 "no speech" 결과일 경우 빈 문자열로 변경
+            if caption_text.translate(str.maketrans('', '', string.punctuation)).strip() == "":
+                caption_text = ""
             
             all_responses.append({
                 "start_time": start_time,
                 "end_time": end_time,
-                "caption": result["text"]
+                "caption": caption_text
             })
             
     except Exception as e:
@@ -260,4 +267,4 @@ def upload_video():
         return jsonify({"error": f"파일 업로드 중 오류가 발생했습니다: {str(e)}"}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=30870)
+    app.run(host="0.0.0.0", port=30870, debug=True)
