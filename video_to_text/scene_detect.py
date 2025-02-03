@@ -1,87 +1,61 @@
-from scenedetect import VideoManager
-from scenedetect import SceneManager
+from scenedetect import VideoManager, SceneManager
 from scenedetect.detectors import ContentDetector
-from scenedetect.video_splitter import split_video_ffmpeg
 
 def scene_detect(video_path):
     """
-    Detect scenes in a video and return their start and end times in seconds.
-
+    Detect scenes in the video and return the start and end times of each scene in seconds as floats.
+    If no scenes are detected, returns a single scene covering the entire video.
+    
     Args:
         video_path (str): Path to the video file.
-
+        
     Returns:
-        list: A list of tuples containing start and end times of each scene in seconds.
+        list: A list of tuples containing the start and end times of each scene in seconds.
+              e.g. [(0.0, 150.65)]
     """
     # Initialize VideoManager and SceneManager
     video_manager = VideoManager([video_path])
     scene_manager = SceneManager()
-
-    # Add ContentDetector for scene detection
+    
+    # Add a ContentDetector (adjust the threshold as needed)
     scene_manager.add_detector(ContentDetector(threshold=50.0))
-
-    # Prepare and start VideoManager
+    
+    # Optionally apply downscale factor for faster processing
     video_manager.set_downscale_factor()
     video_manager.start()
-
+    
+    # Retrieve the total duration of the video
+    # (Depending on the version, this may return a FrameTimecode object or a tuple)
+    total_duration = video_manager.get_duration()
+    
     # Perform scene detection
     scene_manager.detect_scenes(frame_source=video_manager)
     scene_list = scene_manager.get_scene_list()
-
-    # Release the VideoManager
+    
+    # Release VideoManager resources
     video_manager.release()
+    
+    # If no scenes are detected, return the entire video as a single scene
+    if not scene_list:
+        # If total_duration is a tuple, extract the seconds from the first element
+        if isinstance(total_duration, tuple):
+            # Use get_seconds() if the first element is a FrameTimecode object
+            if hasattr(total_duration[0], "get_seconds"):
+                total_seconds = total_duration[0].get_seconds()
+            else:
+                total_seconds = total_duration[0]
+        else:
+            total_seconds = total_duration.get_seconds() if hasattr(total_duration, "get_seconds") else total_duration
 
-    # Extract start and end times of each scene in seconds
-    scene_times = [(scene[0].get_seconds(), scene[1].get_seconds()) for scene in scene_list]
-
+        scene_times = [(0.0, total_seconds)]
+    else:
+        # Convert the start and end times of each detected scene to seconds as floats
+        scene_times = [(start.get_seconds(), end.get_seconds()) for start, end in scene_list]
+    
     return scene_times
 
-def scene_detect_frame(video_path):
-    """
-    Detect scenes in a video and return their start and end frames.
-
-    Args:
-        video_path (str): Path to the video file.
-
-    Returns:
-        list: A list of tuples containing start and end frames of each scene.
-    """
-    # Initialize VideoManager and SceneManager
-    video_manager = VideoManager([video_path])
-    scene_manager = SceneManager()
-
-    # Add ContentDetector for scene detection
-    scene_manager.add_detector(ContentDetector(threshold=66.0))
-
-    # Prepare and start VideoManager
-    video_manager.set_downscale_factor()
-    video_manager.start()
-
-    # Perform scene detection
-    scene_manager.detect_scenes(frame_source=video_manager)
-    scene_list = scene_manager.get_scene_list()
-
-    # Release the VideoManager
-    video_manager.release()
-
-    # Extract start and end frames of each scene
-    scene_frames = [(scene[0].get_frames(), scene[1].get_frames()) for scene in scene_list]
-
-    return scene_frames
-
 # Example usage
-# if __name__ == "__main__":
-#     video_path = '/data/ephemeral/home/jseo/scene_detect/Thanos_eng_sub.mp4'
-#     scenes = scene_detect(video_path)
-
-#     print(f"Detected {len(scenes)} scenes.")
-#     for i, (start, end) in enumerate(scenes):
-#         print(f"Scene {i+1}: Start {start:.2f} seconds End {end:.2f} seconds")
-#     print(scenes)
-
-#     scene_frames = scene_detect_frame(video_path)
-
-#     print(f"Detected {len(scene_frames)} scenes.")
-#     for i, (start, end) in enumerate(scene_frames):
-#         print(f"Scene {i+1}: Start {start} frames End {end} frames")
-#     print(scene_frames)
+if __name__ == "__main__":
+    video_path = '/data/ephemeral/home/data/03NoI9KiZOk.mp4'
+    scenes = scene_detect(video_path)
+    print("Scene times (in seconds):", scenes)
