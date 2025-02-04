@@ -128,6 +128,10 @@ def get_audio_caption(video_path, time_ranges):
         response = processor.batch_decode(generate_ids, skip_special_tokens=True, 
                                         clean_up_tokenization_spaces=False)[0]
         
+        # no information이 포함되어 있으면 빈 문자열로 변경
+        if "no information" in response.lower():
+            response = ""
+            
         all_responses.append({
             "start_time": start_time,
             "end_time": end_time,
@@ -326,6 +330,7 @@ def short_video():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/upload_video', methods=['POST'])
 def upload_video():
     """
@@ -346,32 +351,11 @@ def upload_video():
         description: 업로드할 비디오 파일
     responses:
       200:
-        description: 비디오 업로드 성공
-        schema:
-          type: object
-          properties:
-            video_path:
-              type: string
-              description: 저장된 비디오 파일 경로
-              example: "/home/edddd/data/video.mp4"
+        description: 파일 업로드 성공
       400:
         description: 잘못된 요청
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              description: 에러 메시지
-              example: "비디오 파일이 필요합니다"
       500:
-        description: 서버 에러
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              description: 에러 메시지
-              example: "Internal server error"
+        description: 서버 오류
     """
     try:
         if 'video' not in request.files:
@@ -381,25 +365,24 @@ def upload_video():
         if video_file.filename == '':
             return jsonify({"error": "선택된 파일이 없습니다"}), 400
             
-        # 파일 저장 경로 설정
-        save_dir = '/data/ephemeral/home/data/'
+        # 저장 디렉토리 설정 및 생성
+        save_dir = '/data/ephemeral/home/new-data/'
         os.makedirs(save_dir, exist_ok=True)
         
-        # UUID를 사용하여 고유한 파일명 생성
-        
+        # 고유한 파일명 생성
         file_extension = os.path.splitext(video_file.filename)[1]
-        filename = str(uuid.uuid4()) + file_extension
+        filename = str(uuid.uuid4()) + file_extension + ".mp4"
         file_path = os.path.join(save_dir, filename)
         
-        # 파일 저장
         video_file.save(file_path)
         
         return jsonify({
-            "video_path": file_path
+            "video_path": file_path,
+            "message": "파일이 성공적으로 업로드되었습니다"
         })
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"파일 업로드 중 오류가 발생했습니다: {str(e)}"}), 500
 
 
 
