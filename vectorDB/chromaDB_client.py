@@ -28,7 +28,7 @@ def json_to_vectorDB(model, json_path, collections):
 
         timestamp = row[1].segments['timestamps']
         video_id = row[1].segments['video_id']
-        caption = row[1].segments['video_caption_en']
+        caption = row[1].segments['video_caption_kor']
 
         metadata = {
             "captions": caption,
@@ -58,9 +58,6 @@ def json_to_vectorDB(model, json_path, collections):
 
         # chunk를 answers에 추가
         collections.add(embeddings=chunk_embeddings, ids=chunk_ids, metadatas=chunk_metadatas)
-
-
-
 
 
 # 오디오 캡션 임베딩 함수
@@ -75,7 +72,7 @@ def json_to_vectorDB_audio(model, json_path, collections):
 
         timestamp = row[1].segments['timestamps']
         video_id = row[1].segments['video_id']
-        caption = row[1].segments['audio_caption_en']
+        caption = row[1].segments['stt_caption_kor']
 
         metadata = {
             "captions": caption,
@@ -107,13 +104,10 @@ def json_to_vectorDB_audio(model, json_path, collections):
         collections.add(embeddings=chunk_embeddings, ids=chunk_ids, metadatas=chunk_metadatas)
 
 
-
-
 def text_to_timestamps(model, input, collections):
     input_embedding = model.encode(input, normalize_embeddings=True).tolist()
     result = collections.query(input_embedding, n_results=10)
     return result
-
 
 
 @app.route('/add_json', methods=['POST'])
