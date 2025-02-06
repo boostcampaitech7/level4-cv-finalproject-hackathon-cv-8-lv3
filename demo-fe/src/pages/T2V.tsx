@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { PageToggle, TextToVideo, VideoToText } from '../components';
+import { PageToggle, TextToVideo } from '../components';
 
 const Container = styled.div`
   max-width: 1200px;
@@ -17,16 +17,16 @@ const ComponentWrapper = styled.div`
   margin-bottom: ${({ theme }) => theme.spacing.xlarge};
 `;
 
-function Home() {
+function T2V() {
   return (
     <Container>
-      <Title>Video to Text Demo</Title>
+      <Title>Text to Video Demo</Title>
       <PageToggle />
       <ComponentWrapper>
-        <VideoToText />
+        <TextToVideo />
       </ComponentWrapper>
     </Container>
   );
 }
 
-export default Home;
+export default T2V;
