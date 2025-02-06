@@ -52,7 +52,7 @@ def create_prompt(query_text):
 
 Query Text: {query_text}
 
-1. 비디오 키워드: [시각적 요소와 관련된 자연어만 추출]
+1. 비디오 키워드: 시각적 요소와 관련된거로만 한 문장으로 출력
    중요도: [키워드 수와 중요성에 따라 1-5 사이 점수 부여]
 
 2. STT 키워드: [대화나 음성과 관련된 키워드만 추출]
@@ -65,7 +65,9 @@ Query Text: {query_text}
 - Query Text에서 정확한 단어만 추출
 - 키워드는 대괄호 안에 쉼표로 구분하여 나열
 - json으로 video_keywords: ..., stt_keywords: ..., unique_keywords: ..., unique_keywords_importance: ..., video_keywords_importance: ..., stt_keywords_importance: ...의 형식으로 알려줄 것
+- vide_keywords는 하나의 문장으로만 출력
 - 추출된 키워드의 수와 중요성을 고려하여 중요도 평가
+- 중국어는 절대 쓰지 않아야 하고 최종 출력애 나와서는 안됨
 - 키워드가 없는 경우 1점 부여"""
 
 def create_translation_prompt(english_text):
@@ -76,7 +78,7 @@ English: {english_text}
 important:
 - json으로 translation:... 형식으로만 알려줄 것
 - 번역된 텍스트는 한국어로 번역되어야 함
-- 중국어는 절대 쓰지 않아야 함"""
+- 중국어는 절대 쓰지 않아야 하고 최종 출력애 나와서는 안됨"""
 
 def analyze_query(query_text):
     # 프롬프트 생성 및 모델 입력
@@ -86,7 +88,7 @@ def analyze_query(query_text):
     # 모델 추론
     outputs = model.generate(
         **inputs,
-        max_new_tokens=10000,
+        max_new_tokens=1024,
         temperature=0.8,
         do_sample=True,
         pad_token_id=tokenizer.eos_token_id
@@ -113,9 +115,10 @@ def translate_text(english_text):
     # 모델 추론
     outputs = model.generate(
         **inputs,
-        max_new_tokens=1000,
+        max_new_tokens=1024,
         temperature=0.7,
         do_sample=True,
+        num_beams=1,
         pad_token_id=tokenizer.eos_token_id
     )
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -293,4 +296,4 @@ def translate():
         return jsonify({"error": f"번역 중 오류 발생: {str(e)}"}), 500
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=30870)
+    app.run(host='0.0.0.0', port=30896)
