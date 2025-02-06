@@ -1,12 +1,10 @@
 import json
-import numpy as np
 from flask import Flask, request, jsonify
 from flasgger import Swagger
 import os
 import uuid
 from whisper import load_model
 from whisper.audio import load_audio
-import string
 
 # 모델 초기화 
 model = load_model("turbo", device="cuda", download_root=None)
@@ -319,4 +317,4 @@ def upload_video():
         return jsonify({"error": f"파일 업로드 중 오류가 발생했습니다: {str(e)}"}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=30870, debug=True)
+    app.run(host="0.0.0.0", port=30076)
