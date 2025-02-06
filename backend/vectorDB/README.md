@@ -1,3 +1,4 @@
+# %%%%%% 순서 엄수 %%%%%%
 ## 경로 설정
 ```bash
 cd vectorDB
@@ -11,3 +12,4 @@ chroma run --path ./database/
 python chromaDB_client.py
 ```
 ### 서버를 먼저 켜둔 상태에서 클라이언트 실행
+

@@ -28,7 +28,7 @@ def json_to_vectorDB(model, json_path, collections):
 
         timestamp = row[1].segments['timestamps']
         video_id = row[1].segments['video_id']
-        caption = row[1].segments['video_caption_kor']
+        caption = row[1].segments['video_caption_eng']
 
         metadata = {
             "captions": caption,
@@ -72,7 +72,7 @@ def json_to_vectorDB_audio(model, json_path, collections):
 
         timestamp = row[1].segments['timestamps']
         video_id = row[1].segments['video_id']
-        caption = row[1].segments['stt_caption_kor']
+        caption = row[1].segments['stt_caption_eng']
 
         metadata = {
             "captions": caption,
