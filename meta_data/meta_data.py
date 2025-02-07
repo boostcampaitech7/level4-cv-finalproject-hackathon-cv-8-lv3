@@ -17,8 +17,8 @@ def timeout_handler(signum, frame):
 signal.signal(signal.SIGALRM, timeout_handler)
 signal.alarm(PROGRAM_TIMEOUT)  # PROGRAM_TIMEOUT 초 후 SIGALRM 발생
 
+# TMDB API를 사용하여 영화 제목과 연도를 기반으로 영화 ID를 검색
 def get_movie_id(api_key, movie_title, movie_year=None):
-    """TMDB API를 사용하여 영화 제목과 연도를 기반으로 영화 ID를 검색"""
     if not movie_title:
         return None
     
@@ -40,8 +40,8 @@ def get_movie_id(api_key, movie_title, movie_year=None):
     
     return None
 
+# TMDB API를 사용하여 영화의 출연진 및 제작진 정보를 가져옴
 def get_cast_and_crew(api_key, movie_id):
-    """TMDB API를 사용하여 영화의 출연진 및 제작진 정보를 가져옴"""
     if not movie_id:
         return [], []
     
@@ -62,8 +62,8 @@ def get_cast_and_crew(api_key, movie_id):
     
     return [], []
 
+# JSON 파일에서 대사를 읽고 QuoDB API를 사용하여 영화 제목을 검색
 def search_movie_by_quotes(json_file_path, similarity_threshold=0.8): 
-    """JSON 파일에서 대사를 읽고 QuoDB API를 사용하여 영화 제목을 검색"""
     try:
         with open(json_file_path, 'r') as file:
             data = json.load(file)
@@ -111,8 +111,8 @@ def search_movie_by_quotes(json_file_path, similarity_threshold=0.8):
     
     return None, None
 
+# 대사를 기반으로 영화 정보를 검색하고 TMDB에서 출연진 및 제작진 정보를 가져옴
 def fetch_movie_info(json_path, api_key):
-    """대사를 기반으로 영화 정보를 검색하고 TMDB에서 출연진 및 제작진 정보를 가져옴"""
     movie_title, movie_year = search_movie_by_quotes(json_path)
     if not movie_title:
         return None, None, [], []
