@@ -138,7 +138,7 @@ swagger = Swagger(app, config=swagger_config, template=swagger_template)
 API_ENDPOINTS = {
     'video': "http://10.28.224.34:30742",
     'stt': "http://10.28.224.194:30076", 
-    'vectordb': "http://localhost:30863",
+    'vectordb': "http://localhost:1234",
     'llm': "http://10.28.224.75:30870"
 }
 
@@ -152,19 +152,29 @@ def translate_text(text: str) -> str:
     Returns:
         str: 번역된 한국어 텍스트. 오류 발생시 원본 텍스트 반환
     """
+    DEEPL_API_KEY = "e002ea00-6062-41c7-8382-2e2bb6039b24:fx"  # DeepL API 키를 여기에 입력하세요
+    DEEPL_API_URL = "https://api-free.deepl.com/v2/translate"  # 무료 API의 경우. Pro 버전은 다른 URL 사용
+    
     if not text or not isinstance(text, str):
         return ""
         
     try:
         response = requests.post(
-            f"{API_ENDPOINTS['llm']}/translate",
-            json={"text": text}
+            DEEPL_API_URL,
+            headers={"Authorization": f"DeepL-Auth-Key {DEEPL_API_KEY}"},
+            data={
+                "text": text,
+                "source_lang": "EN",  # 영어에서
+                "target_lang": "KO"   # 한국어로
+            }
         )
         response.raise_for_status()
-        return response.json()["translation"]
         
+        translated_text = response.json()["translations"][0]["text"]
+        return translated_text
+            
     except Exception as e:
-        logger.error(f"번역 중 오류 발생: {str(e)}")
+        logger.error(f"DeepL 번역 중 오류 발생: {str(e)}")
         return text
 
 def upload_video_to_server(server_url: str, video_file) -> str:
@@ -222,7 +232,7 @@ def _save_to_vectordb(translated_data: dict, video_path: str):
                         "end": segment["end_time"]
                     },
                     "video_id": video_id,
-                    "video_caption_kor": segment["caption_kor"]
+                    "video_caption_eng": segment["caption_eng"]
                 },
                 "video_path": video_path
             })
@@ -243,7 +253,7 @@ def _save_to_vectordb(translated_data: dict, video_path: str):
                         "end": segment["end_time"]
                     },
                     "video_id": audio_id,
-                    "stt_caption_kor": segment["caption_kor"]
+                    "stt_caption_eng": segment["caption_eng"]
                 },
                 "video_path": video_path
             })
@@ -380,6 +390,128 @@ def process_entire_video():
         error_msg = f"처리 중 오류 발생: {e}"
         logger.error(error_msg)
         return jsonify({"error": error_msg}), 500
+
+@app.route('/process_video_without_translation', methods=['POST'])
+@swag_from({
+    'tags': ['비디오 처리'],
+    'parameters': [
+        {
+            'name': 'video',
+            'in': 'formData',
+            'type': 'file',
+            'required': False,
+            'description': '처리할 비디오 파일'
+        },
+        {
+            'name': 'video_id',
+            'in': 'formData',
+            'type': 'string',
+            'required': False,
+            'description': '처리할 비디오 ID'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': '비디오 처리 성공',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'video_id': {'type': 'string'},
+                    'stt': {'type': 'array', 'items': {'$ref': '#/definitions/VideoSegment'}},
+                    'video_caption': {'type': 'array', 'items': {'$ref': '#/definitions/VideoSegment'}}
+                }
+            }
+        },
+        400: {
+            'description': '잘못된 요청',
+            'schema': {'$ref': '#/definitions/Error'}
+        },
+        500: {
+            'description': '서버 오류',
+            'schema': {'$ref': '#/definitions/Error'}
+        }
+    }
+})
+def process_video_without_translation():
+    """전체 비디오 처리 API (번역 제외)"""
+    video_file = request.files.get('video')
+    video_id = request.form.get('video_id')
+    
+    if not video_file and not video_id:
+        return jsonify({"error": "비디오 파일 또는 video_id가 필요합니다"}), 400
+
+    try:
+        video_path = upload_video_to_server(API_ENDPOINTS['video'], video_file) if video_file else f"/data/ephemeral/home/movie_clips/{video_id}.mp4"
+        timestamps = scene_detect(video_path)
+        formatted_timestamps = [{"start_time": start, "end_time": end} for start, end in timestamps]
+        
+        # 비디오 캡션 처리
+        video_results = process_api_request(API_ENDPOINTS['video'], video_path, formatted_timestamps)
+        
+        # STT 처리
+        stt_segments = []
+        try:
+            stt_response = requests.post(
+                f"{API_ENDPOINTS['stt']}/entire_video",
+                json={"video_path": video_path}
+            )
+            stt_response.raise_for_status()
+            stt_segments = stt_response.json().get('segments', [])
+        except Exception as e:
+            logger.error(f"STT 처리 실패: {e}")
+
+        # 결과 처리
+        video_segments = []
+        for segment in video_results:
+            try:
+                video_caption_en = segment.get("video_caption_en", "")
+                if not video_caption_en:
+                    logger.warning(f"caption이 없거나 비어있습니다: {segment}")
+                    continue
+                    
+                video_segments.append({
+                    "start_time": segment["timestamps"]["start"],
+                    "end_time": segment["timestamps"]["end"],
+                    "caption_eng": video_caption_en
+                })
+            except KeyError as e:
+                logger.error(f"세그먼트 처리 중 키 오류: {e}, 세그먼트: {segment}")
+                continue
+
+        # STT 처리
+        stt_processed = []
+        for segment in stt_segments:
+            stt_caption = segment.get("stt_caption")
+            if not stt_caption:
+                logger.warning(f"STT segment에 stt_caption이 없습니다: {segment}")
+                continue
+            timestamp = segment.get("timestamp", {})
+            start = timestamp.get("start", 0)
+            end = timestamp.get("end", 0)
+            stt_processed.append({
+                "caption_eng": stt_caption,
+                "start_time": start,
+                "end_time": end
+            })
+
+        result = {
+            "video_id": video_id,
+            "stt": stt_processed,
+            "video_caption": video_segments
+        }
+        
+        try:
+            _save_to_vectordb(result, video_path)
+        except Exception as e:
+            logger.error(f"vectorDB 저장 실패: {e}")
+        
+        return jsonify(result)
+
+    except Exception as e:
+        error_msg = f"처리 중 오류 발생: {e}"
+        logger.error(error_msg)
+        return jsonify({"error": error_msg}), 500
+
 
 
 @app.route('/process_video_with_timestamps', methods=['POST'])
@@ -674,4 +806,4 @@ def search_videos():
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=30863, debug=True)
+    app.run(host='0.0.0.0', port=30936, debug=True)
