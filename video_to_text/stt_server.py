@@ -24,18 +24,18 @@ def get_stt_caption(video_path: str) -> list:
     """
     try:
         audio = load_audio(video_path)
-        # 전체 오디오 길이(초)를 계산
-        sample_rate = 16000  # whisper의 기본 sample rate
-        duration = len(audio) / sample_rate
-        
+
         # STT 수행
+        print(f"디버그 - STT 수행 중...")  # 디버그용 출력
         result = model.transcribe(
             audio=audio,
             logprob_threshold=-2.0,
-            no_speech_threshold=0.95
+            no_speech_threshold=0.95,
+            condition_on_previous_text=True,
+            task="transcribe",
+            fp16=False,            
         )
         print(f"디버그 - STT 결과: {result}")  # 디버그용 출력
-        
         # segments 배열 생성
         segments = []
         
@@ -46,12 +46,58 @@ def get_stt_caption(video_path: str) -> list:
                 "end_time": segment["end"], 
                 "caption": segment["text"]
             })
-            
+        
+        segments = filter_captions(segments)
         return segments
             
     except Exception as e:
         print(f"STT 처리 중 오류 발생: {str(e)}")
         return []
+      
+def filter_captions(segments: list) -> list:
+    """
+    STT 캡션을 필터링하여 중복 제거 및 불필요한 텍스트 제거하고,
+    캡션의 앞뒤 공백도 제거합니다.
+    
+    Args:
+        segments (list): STT 세그먼트 리스트
+        
+    Returns:
+        list: 필터링된 세그먼트 리스트
+    """
+    try:
+        filtered_segments = []
+        seen_captions = set()  # normalized된 캡션을 저장할 set
+        
+        for segment in segments:
+            # 캡션의 앞뒤 공백 제거
+            caption = segment["caption"].strip()
+            normalized_caption = caption.lower()
+
+            # 기호만 있거나 빈 문자열인 경우 제외
+            if not any(c.isalnum() for c in caption):
+                continue
+
+            # 영어 단어가 한 개만 있는 경우(ex. "Hello") 제외
+            words = caption.split()
+            if len(words) == 1 and all(c.isascii() for c in caption):
+                continue
+
+            # 이전에 동일한 캡션이 등장했으면 제외
+            if normalized_caption in seen_captions:
+                continue
+
+            seen_captions.add(normalized_caption)
+            # 앞뒤 공백이 제거된 캡션으로 업데이트
+            segment["caption"] = caption
+            filtered_segments.append(segment)
+            
+        return filtered_segments
+
+    except Exception as e:
+        print(f"캡션 필터링 중 오류 발생: {str(e)}")
+        return segments
+
 
 @app.route('/save_captions', methods=['POST'])
 def save_captions():
@@ -155,7 +201,20 @@ def entire_video():
             return jsonify({"error": "비디오 경로가 누락되었습니다"}), 400
             
         video_id = video_path.split('/')[-1].split('.')[0]
-            
+        
+        # 캐시 파일 경로
+        cache_dir = '/data/ephemeral/home/cache/'
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_path = os.path.join(cache_dir, f'{video_id}_stt_cache.json')
+        
+        # 캐시된 결과가 있는지 확인
+        if os.path.exists(cache_path):
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                cached_result = json.load(f)
+                print(f"디버그 - 캐시된 결과: {cached_result}")  # 디버그용 출력
+                return jsonify(cached_result)
+                
+        # 캐시가 없으면 새로 생성
         stt_captions = get_stt_caption(video_path)
         
         if not stt_captions:
@@ -172,10 +231,16 @@ def entire_video():
                 }
             })
 
-        return jsonify({
+        result = {
             'video_path': video_path,
             'segments': res
-        })
+        }
+        
+        # 결과를 캐시에 저장
+        with open(cache_path, 'w', encoding='utf-8') as f:
+            json.dump(result, f, ensure_ascii=False, indent=4)
+            
+        return jsonify(result)
     
     except Exception as e:
         return jsonify({'error': f"처리 중 오류가 발생했습니다: {str(e)}"}), 500
@@ -317,4 +382,4 @@ def upload_video():
         return jsonify({"error": f"파일 업로드 중 오류가 발생했습니다: {str(e)}"}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=30076)
+    app.run(host="0.0.0.0", port=30076, debug=True)
