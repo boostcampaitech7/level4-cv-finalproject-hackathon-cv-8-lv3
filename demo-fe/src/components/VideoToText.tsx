@@ -12,8 +12,6 @@ import {
 } from '../styles/SharedStyles';
 import styled from 'styled-components';
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;
-
 const ResultContainer = styled.div`
   margin-top: ${({ theme }) => theme.spacing.large};
   padding: ${({ theme }) => theme.spacing.medium};
@@ -117,7 +115,7 @@ function VideoToTextSearch() {
       }
 
       const response = await fetch(
-        `${SERVER_URL}/process_video_with_timestamps`,
+        `/api/proxy`,
         {
           method: 'POST',
           body: formData
