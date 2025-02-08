@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { PageToggle, TextToVideo, VideoToText } from '../components';
+import { PageToggle, VideoToText } from '../components';
 
 const Container = styled.div`
   max-width: 1200px;
