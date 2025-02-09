@@ -79,25 +79,25 @@ API_KEYS = [
 key_manager = APIKeyManager(API_KEYS)
 
 def create_prompt(query_text):
-    return f"""Query Text에서 정확한 단어와 구문을 추출하고, 추출된 문장의 중요도를 평가하세요:
+   return f"""Query Text에서 정확한 단어와 구문을 추출하고, 추출된 문장의 중요도를 평가하세요:
 
 Query Text: {query_text}
 
-1. 비디오 분야: [시각적 요소와 관련된 모든 단어를 합쳐서 하나의 이어지는 문장으로 추출]
-   중요도: [문장의 중요성에 따라 1-5 사이 점수 부여]
+1. 비디오 분야: [Query Text 내의 시각적 요소와 관련된 모든 단어를 합쳐서 하나의 이어지는 문장으로 추출 -> 고유명사(배우 이름, 등장인물 이름)는 대명사로 변경 -> 영어로 번역]
+   중요도: [중요성에 따라 1-5 사이 하나의 점수 부여]
 
-2. STT 분야: [대화나 음성과 관련된 문장을 문장별로 각각 나누어 "..."로 감싸서 추출 (말한 사람 제외)]
-   중요도: [문장의 중요성에 따라 1-5 사이 점수 부여]
+2. STT 분야: [Query Text 내의 대화나 음성과 관련된 문장을 문장별로 각각 나누어 "..."로 감싸서 추출 (말한 사람 제외) -> 영어로 번역]
+   중요도: [중요성에 따라 1-5 사이 하나의 점수 부여]
 
-3. 고유명사: [Query Text 내의 인물, 장소, 작품명 등 모든 고유명사를 각각 영어로 번역 후 나누어 "..."로 감싸서 추출]
-   중요도: [고유명사의 중요성에 따라 1-5 사이 점수 부여]
+3. 고유명사: [Query Text 내의 고유명사 (배우 이름, 등장인물 이름만)를 각각 영어로 번역 후 나누어 "..."로 감싸서 추출]
+   중요도: [중요성에 따라 1-5 사이 하나의 점수 부여]
 
 중요:
-- Query Text에서 정확한 단어만 합쳐서 하나의 문장으로 추출
+- video_field는 정확한 단어만 합쳐서 하나의 문장으로 추출 -> 고유명사(배우 이름, 등장인물 이름)는 대명사로 변경 -> 영어로 번역
 - json으로 video_field: ["..."], video_field_importance: ..., stt_field: ["...", "...", "...", ...], stt_field_importance: ..., unique_field: ["...", "...", "...", ...], unique_field_importance: ... 의 형식으로 알려줄 것
-- video_field는 하나의 이어지는 문장으로 출력
 - 추출된 문장의 중요성을 고려하여 중요도 평가
-- 키워드가 없는 경우 1점 부여"""
+- 키워드가 없는 경우 1점 부여
+- Query Text에 ~장면은 포함되지 않게 추출"""
 
 def create_translation_prompt(english_text):
     return f"""Please translate the following English text to Korean:
