@@ -140,6 +140,11 @@ def analyze_query(query_text):
         
         try:
             response = model.generate_content(prompt)
+            
+            if not response.text:
+                key_manager.get_next_key()
+                return analyze_query(query_text)
+            
             json_pattern = r'\{[^{}]*\}'
             json_match = re.search(json_pattern, response.text)
             
@@ -349,4 +354,4 @@ def translate():
         return jsonify({"error": f"번역 중 오류 발생: {str(e)}"}), 500
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=30896)
+    app.run(host='0.0.0.0', port=30896, debug=True)
