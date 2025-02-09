@@ -1,6 +1,14 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flasgger import Swagger, swag_from
+import os
+import sys
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 from ml.video_to_text.scene_detect import scene_detect
 from metadata_db.db_search_data import select_query
 
@@ -833,7 +841,6 @@ def get_base_video_id(video_id):
 
 def rank_search_results(video_results, stt_results, meta_results):
     """검색 결과의 순위를 매기는 함수"""
-    
     # video_results와 stt_results에서 ID 추출
     video_ids = set()
     if video_results and 'ids' in video_results and video_results['ids']:

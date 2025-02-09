@@ -19,7 +19,7 @@ def insert_movie_data(movie_json, filename):
     :param movie_json: 영화 데이터 (title, cast 목록 포함)
     :param filename: 원본 파일명 (영화 ID 추출용)
     """
-    conn = sqlite3.connect("movies.db")
+    conn = sqlite3.connect("/data/ephemeral/home/level4-cv-finalproject-hackathon-cv-8-lv3/backend/metadata_db/movies.db")
     cursor = conn.cursor()
 
     # 1️⃣ 파일명에서 movie_id 추출
