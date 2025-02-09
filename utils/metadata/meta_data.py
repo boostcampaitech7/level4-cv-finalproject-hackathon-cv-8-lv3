@@ -58,7 +58,9 @@ def get_cast_and_crew(api_key, movie_id):
         response = requests.get(credits_url, params=params, timeout=10)
         if response.status_code == 200:
             data = response.json()
-            cast_list = [f"{actor['name']} as {actor['character']}" for actor in data.get('cast', [])]
+            # cast_list = [f"{actor['name']} as {actor['character']}" for actor in data.get('cast', [])]
+            # cast_list = [{"actor":f"{actor['name']}", "role": f"{actor['character']}"} for actor in data.get('cast', [])]
+            cast_list = [{"actor":actor['name'], "role": actor['character']} for actor in data.get('cast', [])]
             crew_list = [f"{member['job']}: {member['name']}" for member in data.get('crew', []) if member['job'] in ['Director', 'Producer', 'Writer', 'Cinematographer', 'Original Music Composer']]
             return cast_list, crew_list
     except requests.exceptions.Timeout:
@@ -141,7 +143,7 @@ def fetch_movie_info(json_path, api_key):
 # 사용예시
 if __name__ == "__main__":
     API_KEY = 'ff315049f0603ced165f84b648338838' 
-    json_path = "/data/ephemeral/home/jseo/_dtNz4Te0Gw.json"
+    json_path = "/Users/kimhyungjun/level4-cv-finalproject-hackathon-cv-8-lv3/test.json"
     
     try:
         movie_title, movie_year, cast, crew = run_with_timeout(fetch_movie_info, 30, json_path, API_KEY)

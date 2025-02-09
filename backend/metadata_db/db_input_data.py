@@ -69,6 +69,21 @@ def insert_all_movies_from_folder(folder_path):
         except Exception as e:
             print(f"❌ Failed to process {json_file}: {e}")
 
-# 🔍 실행: 특정 폴더 내 모든 JSON 파일 삽입
-json_folder = "/Users/kimhyungjun/chromaTest/meta_data/meta_data/movie_info"  # 메타 데이터 JSON 파일이 있는 폴더 경로
-insert_all_movies_from_folder(json_folder)
+
+def insert_movie_from_file(json_file_path):
+    """
+    지정된 JSON 파일을 읽어 `insert_movie_data()` 실행
+    :param json_file_path: JSON 파일 경로
+    """
+    try:
+        with open(json_file_path, "r", encoding="utf-8") as f:
+            movie_json = json.load(f)  # JSON 파일 읽기
+            insert_movie_data(movie_json, json_file_path)  # 데이터 삽입
+    except Exception as e:
+        print(f"❌ Failed to process {json_file_path}: {e}")
+
+if __name__=="__main__":
+    # 🔍 실행: 특정 폴더 내 모든 JSON 파일 삽입
+    json_folder = "/Users/kimhyungjun/chromaTest/meta_data/meta_data/movie_info"  # 메타 데이터 JSON 파일이 있는 폴더 경로
+    # insert_all_movies_from_folder(json_folder)
+    insert_movie_from_file('/Users/kimhyungjun/level4-cv-finalproject-hackathon-cv-8-lv3/utils/metadata/json_metadata/BPNUN_aCFAc_meta_data.json')
