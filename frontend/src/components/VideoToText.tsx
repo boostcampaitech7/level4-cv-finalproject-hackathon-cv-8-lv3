@@ -115,7 +115,7 @@ function VideoToTextSearch() {
       }
 
       const response = await fetch(
-        `${process.env.REACT_APP_SERVER_URL}/process_video_with_timestamps`,
+        `/api/proxy`,
         {
           method: 'POST',
           body: formData
@@ -130,12 +130,10 @@ function VideoToTextSearch() {
       const data = await response.json();
       console.log('Server response:', data);
 
-      // API 응답에 video_caption 데이터가 없으면 에러 처리
       if (!data.video_caption || data.video_caption.length === 0) {
         throw new Error('처리된 결과가 없습니다.');
       }
 
-      // video_caption과 stt 데이터를 각각 상태에 저장합니다.
       setVideoCaptions(data.video_caption);
       setSttCaptions(data.stt || []);
 

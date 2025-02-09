@@ -65,7 +65,6 @@ function TextToVideoSearch() {
   const handleSearch = () => {
     console.log('Searching for:', query, videoFiles);
 
-    // Simulated search results
     setFrames([
       'https://picsum.photos/seed/1/300/200',
       'https://picsum.photos/seed/2/300/200',

@@ -14,7 +14,7 @@ client = HttpClient(host='localhost', port=8000)
 movie_clips = client.get_or_create_collection(name="movie_clips")
 audio_clips = client.get_or_create_collection(name="audio_clips")
 
-model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
 
 # 비디오 캡션 임베딩 함수
 def json_to_vectorDB(model, json_path, collections): 
@@ -25,10 +25,10 @@ def json_to_vectorDB(model, json_path, collections):
 
     for row in tqdm(df.iterrows()):
         video_path = row[1].video_path
-
+        
         timestamp = row[1].segments['timestamps']
         video_id = row[1].segments['video_id']
-        caption = row[1].segments['video_caption_kor']
+        caption = row[1].segments['video_caption_eng']
 
         metadata = {
             "captions": caption,
@@ -72,7 +72,7 @@ def json_to_vectorDB_audio(model, json_path, collections):
 
         timestamp = row[1].segments['timestamps']
         video_id = row[1].segments['video_id']
-        caption = row[1].segments['stt_caption_kor']
+        caption = row[1].segments['stt_caption_eng']
 
         metadata = {
             "captions": caption,
