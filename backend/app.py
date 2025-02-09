@@ -15,6 +15,7 @@ from metadata_db.db_search_data import select_query
 import requests
 import json
 import logging
+import hashlib
 
 # Flask 앱 설정
 app = Flask(__name__)
@@ -187,16 +188,30 @@ def translate_text(text: str) -> str:
         logger.error(f"DeepL 번역 중 오류 발생: {str(e)}")
         return text
 
-def upload_video_to_server(server_url: str, video_file) -> str:
-    """비디오 업로드 함수"""
+def get_file_hash(video_file):
+    """파일 내용을 SHA-256 해시로 변환"""
+    hasher = hashlib.sha256()
+    video_file.seek(0)  # 파일 포인터를 처음으로 이동
+    while chunk := video_file.read(8192):  # 8KB씩 읽기
+        hasher.update(chunk)
+    video_file.seek(0)  # 다시 처음으로 이동 (중요!)
+    return hasher.hexdigest()
+
+def upload_video_to_server(server_url: str, video_file_path: str, file_name: str) -> str:
     try:
-        files = {
-            "video": (video_file.filename, video_file, video_file.content_type)
-        }
-        response = requests.post(f"{server_url}/upload_video", files=files)
-        response.raise_for_status()
-        print(response.json())
-        return response.json()["video_path"]
+        with open(video_file_path, 'rb') as f:
+            files = {
+                "video": (file_name, f, "video/mp4")  # 파일을 직접 스트리밍 방식으로 전송
+            }
+            data = {
+                "file_name": file_name
+            }
+            response = requests.post(f"{server_url}/upload_video", files=files, data=data)
+            response.raise_for_status()
+
+            result = response.json()
+            return result["video_path"]
+
     except Exception as e:
         raise Exception(f"비디오 업로드 실패: {e}")
 
@@ -593,9 +608,33 @@ def process_video_with_timestamps():
         return jsonify({"error": "timestamps가 비어있습니다"}), 400
 
     try:
-        video_path = upload_video_to_server(API_ENDPOINTS['video'], video_file) if video_file else f"/data/ephemeral/home/movie_clips/{video_id}.mp4"
-        detected_timestamps = scene_detect(video_path)
+        if video_file:
+            logger.info(f"✅ 업로드된 파일명: {video_file.filename}")
+
+            save_dir = '/data/ephemeral/home/new-data/'
+            os.makedirs(save_dir, exist_ok=True)
         
+            file_extension = os.path.splitext(video_file.filename)[1]
+            file_name = str(get_file_hash(video_file)) + file_extension
+            logger.info(f"✅ 파일명 해시: {file_name}")
+            file_path = os.path.join(save_dir, file_name)
+        
+            logger.info(f"✅ 파일 저장 경로: {file_path}")
+        
+            with open(file_path, 'wb') as f:
+                f.write(video_file.read())
+        
+            logger.info(f"✅ 파일 저장 완료")   
+        
+         # ✅ 2번 서버에 동영상 저장
+        video_path_2 = upload_video_to_server(API_ENDPOINTS['video'], file_path, file_name) if video_file else f"/data/ephemeral/home/movie_clips/{video_id}.mp4"
+        logger.info(f"📤 2번 서버 비디오 업로드 완료: {video_path_2}")
+
+        # ✅ 1번 서버에도 동일한 동영상 업로드
+        video_path_1 = upload_video_to_server(API_ENDPOINTS['stt'], file_path, file_name) if video_file else f"/data/ephemeral/home/backup/{video_id}.mp4"
+        logger.info(f"📤 1번 서버 비디오 업로드 완료: {video_path_1}")
+
+        detected_timestamps = scene_detect(video_path_2)
         filtered_timestamps = [
             {"start_time": start, "end_time": end}
             for start, end in detected_timestamps
@@ -606,22 +645,22 @@ def process_video_with_timestamps():
         if not filtered_timestamps:
             return jsonify({"error": "지정된 타임스탬프 구간 내에서 감지된 장면이 없습니다"}), 400
 
-        # 비디오 캡션 처리
-        video_results = process_api_request(API_ENDPOINTS['video'], video_path, filtered_timestamps)
-        
-        # STT 처리
+        # ✅ 비디오 캡션 처리
+        video_results = process_api_request(API_ENDPOINTS['video'], video_path_2, filtered_timestamps)
+
+        # ✅ STT 처리
         stt_segments = []
         try:
             stt_response = requests.post(
                 f"{API_ENDPOINTS['stt']}/entire_video",
-                json={"video_path": video_path}
+                json={"video_path": video_path_2}
             )
             stt_response.raise_for_status()
             stt_segments = stt_response.json().get('segments', [])
         except Exception as e:
             logger.error(f"STT 처리 실패: {e}")
 
-        # 비디오 캡션 결과 처리
+        # ✅ 비디오 캡션 결과 처리
         video_segments = []
         for segment in video_results:
             try:
@@ -629,11 +668,10 @@ def process_video_with_timestamps():
                 if not video_caption_en:
                     logger.warning(f"caption이 없거나 비어있습니다: {segment}")
                     continue
-                    
+
                 start_time = segment["timestamps"]["start"]
                 end_time = segment["timestamps"]["end"]
-                
-                # 사용자가 지정한 타임스탬프와 겹치는지 확인
+
                 for ts in timestamps:
                     if not (ts["end"] < start_time or ts["start"] > end_time):
                         video_segments.append({
@@ -643,24 +681,22 @@ def process_video_with_timestamps():
                             "caption_kor": translate_text(video_caption_en)
                         })
                         break
-                        
             except KeyError as e:
                 logger.error(f"세그먼트 처리 중 키 오류: {e}, 세그먼트: {segment}")
                 continue
 
-        # STT 번역 처리
+        # ✅ STT 번역 처리
         stt_translated = []
         for segment in stt_segments:
             stt_caption = segment.get("stt_caption")
             if not stt_caption:
                 logger.warning(f"STT segment에 stt_caption이 없습니다: {segment}")
                 continue
-                
+
             timestamp = segment.get("timestamp", {})
             start = timestamp.get("start", 0)
             end = timestamp.get("end", 0)
-            
-            # 사용자가 지정한 타임스탬프와 겹치는지 확인
+
             for ts in timestamps:
                 if not (ts["end"] < start or ts["start"] > end):
                     stt_translated.append({
@@ -674,14 +710,16 @@ def process_video_with_timestamps():
         result = {
             "video_id": video_id,
             "stt": stt_translated,
-            "video_caption": video_segments
+            "video_caption": video_segments,
+            "video_path_2": video_path_2,  # 2번 서버 경로
+            "video_path_1": video_path_1   # 1번 서버 경로 추가
         }
-        
+
         try:
-            _save_to_vectordb(result, video_path)
+            _save_to_vectordb(result, video_path_2)
         except Exception as e:
             logger.error(f"vectorDB 저장 실패: {e}")
-        
+
         return jsonify(result)
 
     except Exception as e:
