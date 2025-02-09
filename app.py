@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flasgger import Swagger, swag_from
 from video_to_text.scene_detect import scene_detect
+from db_search import search_movies_like
+
 import requests
 import json
 import logging
@@ -139,7 +141,7 @@ API_ENDPOINTS = {
     'video': "http://10.28.224.34:30742",
     'stt': "http://10.28.224.194:30076", 
     'vectordb': "http://localhost:1234",
-    'llm': "http://10.28.224.75:30870"
+    'llm': "http://10.28.224.27:30896"
 }
 
 # 유틸리티 함수
@@ -742,28 +744,36 @@ def search_videos():
             )
             llm_response.raise_for_status()
             query_analysis = llm_response.json()['result']
+            print("query_analysis", query_analysis)
             
-            # 키워드 그룹 추출
-            video_keywords = query_analysis.get('video_keywords', [])
-            stt_keywords = query_analysis.get('stt_keywords', [])
             
-            # 비디오 키워드와 STT 키워드 각각 검색
+            # 비디오 필드와 중요도 추출
+            video_field = query_analysis.get('video_field', '')
+            video_importance = query_analysis.get('video_field_importance', 0)
+            
+            # STT 필드와 중요도 추출  
+            stt_fields = query_analysis.get('stt_field', [])
+            stt_importance = query_analysis.get('stt_field_importance', [])
+            
+            # 고유 필드와 중요도 추출
+            unique_fields = query_analysis.get('unique_field', [])
+            unique_importance = query_analysis.get('unique_field_importance', [])
+            
+            
+            # 비디오 검색
             video_results = []
-            stt_results = []
-            
-            # 비디오 키워드 검색
-            if video_keywords:
-                video_search_text = ' '.join(video_keywords)
+            if video_field:
                 response = requests.post(
                     f"{API_ENDPOINTS['vectordb']}/query",
-                    json={"input_text": video_search_text}
+                    json={"input_text": video_field}
                 )
                 if response.status_code == 200:
                     video_results = response.json()
             
-            # STT 키워드 검색
-            if stt_keywords:
-                stt_search_text = ' '.join(stt_keywords)
+            # STT 검색
+            stt_results = []
+            if stt_fields:
+                stt_search_text = ' '.join(stt_fields)
                 response = requests.post(
                     f"{API_ENDPOINTS['vectordb']}/query_audio",
                     json={"input_text": stt_search_text}
@@ -771,13 +781,20 @@ def search_videos():
                 if response.status_code == 200:
                     stt_results = response.json()
             
-            # 결과 병합
-            combined_results = {
-                "video_results": video_results,
-                "stt_results": stt_results
-            }
+            meta_results = []
+            if unique_fields:
+                # unique_fields를 이용하여 메타데이터 검색 수행
+                meta_results = search_movies_like(unique_fields)
             
-            return jsonify({"results": combined_results})
+
+            # 검색 결과 순위 매기기
+            final_results = rank_search_results(
+                video_results if video_results else [],
+                stt_results if stt_results else [],
+                meta_results if meta_results else []
+            )
+            
+            return jsonify({"results": final_results})
 
         except Exception as e:
             logger.warning(f"쿼리 분석 실패, 원본 텍스트로 검색: {e}")
@@ -791,19 +808,165 @@ def search_videos():
                 json={"input_text": data['text']}
             )
             
-            return jsonify({
-                "results": {
-                    "video_results": video_response.json() if video_response.status_code == 200 else [],
-                    "stt_results": stt_response.json() if stt_response.status_code == 200 else []
-                }
-            })
+            meta_results = []
+            if unique_fields:
+                meta_results = search_movies_like(unique_fields)
+            print("meta_results", meta_results)
+            final_results = rank_search_results(video_response.json() if video_response.status_code == 200 else [], stt_response.json() if stt_response.status_code == 200 else [], meta_results if meta_results else [])
+            return jsonify({"results": final_results})
 
     except Exception as e:
         error_msg = f"검색 중 오류 발생: {e}"
         logger.error(error_msg)
         return jsonify({"error": error_msg}), 500
 
+def get_base_video_id(video_id):
+    """비디오 ID에서 기본 ID 추출 (숫자 제외)"""
+    import re
+    # 문자열이 아니라면 문자열로 변환을 시도
+    if not isinstance(video_id, str):
+        try:
+            video_id = str(video_id)
+        except Exception:
+            return ""
+    return re.sub(r'_\d+$', '', video_id)
 
-
+def rank_search_results(video_results, stt_results, meta_results):
+    """검색 결과의 순위를 매기는 함수"""
+    
+    # video_results와 stt_results에서 ID 추출
+    video_ids = set()
+    if video_results and 'ids' in video_results and video_results['ids']:
+        for id_list in video_results['ids']:
+            for id in id_list:
+                video_ids.add(get_base_video_id(id))
+            
+    stt_ids = set()
+    if stt_results and 'ids' in stt_results and stt_results['ids']:
+        for id_list in stt_results['ids']:
+            for id in id_list:
+                stt_ids.add(get_base_video_id(id))
+            
+    meta_ids = set()
+    if meta_results:
+        meta_ids = set(result['id'] for result in meta_results if isinstance(result, dict) and 'id' in result)
+                
+    print("video_ids", video_ids)
+    print("stt_ids", stt_ids)
+    print("meta_ids", meta_ids)
+    
+    ranked_results = []
+    
+    # 3개 모두 있는 경우
+    if video_ids and stt_ids and meta_ids:
+        print("3개 모두 있는 경우")
+        # 1. 3개 모두 겹치는 결과
+        triple_overlap = video_ids & stt_ids & meta_ids
+        # 2. 비디오 + 메타 겹치는 결과 
+        video_meta_overlap = video_ids & meta_ids - triple_overlap
+        # 3. 비디오 + STT 겹치는 결과
+        video_stt_overlap = video_ids & stt_ids - triple_overlap
+        # 4. STT + 메타 겹치는 결과
+        stt_meta_overlap = stt_ids & meta_ids - triple_overlap
+        
+        # 결과 순서대로 추가
+        for video_id in triple_overlap:
+            for i, id_list in enumerate(video_results['ids']):
+                for j, vid in enumerate(id_list):
+                    if get_base_video_id(vid) == video_id:
+                        ranked_results.append({
+                            'video_id': vid,
+                            'metadata': video_results['metadatas'][i][j] if video_results['metadatas'] else None
+                        })
+        
+        for video_id in video_meta_overlap | video_stt_overlap:
+            for i, id_list in enumerate(video_results['ids']):
+                for j, vid in enumerate(id_list):
+                    if get_base_video_id(vid) == video_id:
+                        ranked_results.append({
+                            'video_id': vid,
+                            'metadata': video_results['metadatas'][i][j] if video_results['metadatas'] else None
+                        })
+                        
+        for video_id in stt_meta_overlap:
+            for i, id_list in enumerate(stt_results['ids']):
+                for j, vid in enumerate(id_list):
+                    if get_base_video_id(vid) == video_id:
+                        ranked_results.append({
+                            'video_id': vid,
+                            'metadata': stt_results['metadatas'][i][j] if stt_results['metadatas'] else None
+                        })
+                        
+        # 5. 나머지 메타 결과
+        remaining_meta = meta_ids - triple_overlap - video_meta_overlap - stt_meta_overlap
+        for video_id in remaining_meta:
+            meta_matches = [r for r in meta_results if isinstance(r, dict) and 'id' in r and r['id'] == video_id]
+            if meta_matches:
+                ranked_results.append(meta_matches[0])
+                
+    # 비디오 + 메타만 있는 경우
+    elif video_ids and meta_ids and not stt_ids:
+        print("비디오 + 메타만 있는 경우")
+        overlap = video_ids & meta_ids
+        for video_id in overlap:
+            for i, id_list in enumerate(video_results['ids']):
+                for j, vid in enumerate(id_list):
+                    if get_base_video_id(vid) == video_id:
+                        ranked_results.append({
+                            'video_id': vid,
+                            'metadata': video_results['metadatas'][i][j] if video_results['metadatas'] else None
+                        })
+                        
+    # STT + 메타만 있는 경우
+    elif stt_ids and meta_ids and not video_ids:
+        print("STT + 메타만 있는 경우")
+        overlap = stt_ids & meta_ids
+        for video_id in overlap:
+            for i, id_list in enumerate(stt_results['ids']):
+                for j, vid in enumerate(id_list):
+                    if get_base_video_id(vid) == video_id:
+                        ranked_results.append({
+                            'video_id': vid,
+                            'metadata': stt_results['metadatas'][i][j] if stt_results['metadatas'] else None
+                        })
+        remaining_meta = [r for r in meta_results if isinstance(r, dict) and 'id' in r and r['id'] not in overlap]
+        ranked_results.extend(remaining_meta[:30])
+        
+    # 비디오 + STT만 있는 경우
+    elif video_ids and stt_ids and not meta_ids:
+        print("비디오 + STT만 있는 경우")
+        overlap = video_ids & stt_ids
+        for video_id in overlap:
+            for i, id_list in enumerate(video_results['ids']):
+                for j, vid in enumerate(id_list):
+                    if get_base_video_id(vid) == video_id:
+                        ranked_results.append({
+                            'video_id': vid,
+                            'metadata': video_results['metadatas'][i][j] if video_results['metadatas'] else None
+                        })
+                        
+    # 하나만 있는 경우
+    else:
+        print("하나만 있는 경우")
+        if video_ids:
+            for i, id_list in enumerate(video_results['ids']):
+                for j, vid in enumerate(id_list):
+                    ranked_results.append({
+                        'video_id': vid,
+                        'metadata': video_results['metadatas'][i][j] if video_results['metadatas'] else None
+                    })
+        elif stt_ids:
+            for i, id_list in enumerate(stt_results['ids']):
+                for j, vid in enumerate(id_list):
+                    ranked_results.append({
+                        'video_id': vid,
+                        'metadata': stt_results['metadatas'][i][j] if stt_results['metadatas'] else None
+                    })
+        elif meta_ids:
+            print("meta_ids만 있는 경우")
+            ranked_results = [meta_results[0]]
+            
+    print("ranked_results 처리 완료")
+    return ranked_results
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=30936, debug=True)

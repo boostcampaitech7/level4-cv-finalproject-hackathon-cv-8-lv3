@@ -14,7 +14,7 @@ client = HttpClient(host='localhost', port=8000)
 movie_clips = client.get_or_create_collection(name="movie_clips")
 audio_clips = client.get_or_create_collection(name="audio_clips")
 
-model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
 
 # 비디오 캡션 임베딩 함수
 def json_to_vectorDB(model, json_path, collections): 
