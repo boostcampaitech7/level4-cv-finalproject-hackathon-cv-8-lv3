@@ -6,7 +6,7 @@ import google.generativeai as genai
 from typing import List
 import time
 
-# Flask 앱 초기화 
+# Flask 앱 초기화  
 app = Flask(__name__)
 swagger = Swagger(app)
 
