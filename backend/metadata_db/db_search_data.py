@@ -6,7 +6,7 @@ def search_movies_like(queries):
     :param queries: 리스트 형태의 검색어 ex) ["DiCaprio", "Titanic"]
     :return: 검색된 영화 ID 및 제목 리스트 (같은 제목의 모든 ID 포함)
     """
-    conn = sqlite3.connect("movies.db")
+    conn = sqlite3.connect("/data/ephemeral/home/level4-cv-finalproject-hackathon-cv-8-lv3/backend/metadata_db/movies.db")
     cursor = conn.cursor()
 
     # 모든 영화별 데이터를 하나의 문자열로 합쳐서 검색
@@ -73,8 +73,8 @@ def select_query(queries):
     # 결과를 리스트로 변환
     return [{"id": movie_id, "title": title} for movie_id, title in results]
         
-print(select_query(['hulk', 'ironman', 'hulkbuster']))
-print(select_query(['hulk', 'ironman', 'hulkbuster']))
+# print(select_query(['hulk', 'ironman', 'hulkbuster']))
+# print(select_query(['hulk', 'ironman', 'hulkbuster']))
 # 🔍 테스트 실행
 # print(search_movies_like(["IronMan", "Avengers"]))  # [{'id': 'ZXTUV_pQWER', 'title': 'Avengers'}]
 # print(search_movies_like(["IronMan", "robert"]))  # [{'id': 'ZXTUV_pQWER', 'title': 'Avengers'}]
@@ -85,6 +85,6 @@ print(select_query(['hulk', 'ironman', 'hulkbuster']))
 # print(search_movies_like(["Rose"]))  # [{'id': 'NMPQL_dEGRf', 'title': 'Titanic'}]
 # print(search_movies_like(["ChrisEvans"]))  # [{'id': 'ZXTUV_pQWER', 'title': 'Avengers'}]
 # print(search_movies_like(["Dicaprio"]))  # [{'id': 'ZXTUV_pQWER', 'title': 'Avengers'}]
-print(search_movies_like(['tom']))  # [{'id': 'ZXTUV_pQWER', 'title': 'Avengers'}]
+# print(search_movies_like(['tom']))  # [{'id': 'ZXTUV_pQWER', 'title': 'Avengers'}]
 
 
