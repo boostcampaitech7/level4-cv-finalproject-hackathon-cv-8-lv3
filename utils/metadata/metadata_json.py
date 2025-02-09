@@ -1,8 +1,15 @@
 import json
 import os
-from meta_data import fetch_movie_info, run_with_timeout
+import sys
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+from utils.metadata.meta_data import fetch_movie_info, run_with_timeout
+
 #서버에서 절대 경로로 수정하기
-def process_movie_data(json_data: dict, cache_folder: str = 'temp', timeout: int = 30):
+def process_movie_data(json_data: dict, cache_folder: str = '/data/ephemeral/home/level4-cv-finalproject-hackathon-cv-8-lv3/utils/metadata/temp', timeout: int = 30):
     """
     This function processes a given JSON object containing movie data.
     It saves the JSON data as a temporary file, retrieves movie information
@@ -12,7 +19,7 @@ def process_movie_data(json_data: dict, cache_folder: str = 'temp', timeout: int
     :param cache_folder: Directory where the temporary JSON file will be stored before processing.
     :param timeout: Maximum time allowed (in seconds) for the API request before timing out.
     """
-    output_folder = 'json_metadata'
+    output_folder = '/data/ephemeral/home/level4-cv-finalproject-hackathon-cv-8-lv3/utils/metadata/json_metadata'
     api_key = API_KEY = 'ff315049f0603ced165f84b648338838'
     try:
         # Ensure necessary folders exist
@@ -28,7 +35,6 @@ def process_movie_data(json_data: dict, cache_folder: str = 'temp', timeout: int
         temp_filepath = os.path.join(cache_folder, temp_filename)
         with open(temp_filepath, "w", encoding="utf-8") as temp_file:
             json.dump(json_data, temp_file, indent=4, ensure_ascii=False)
-        
         # Fetch movie information with timeout protection
         movie_title, movie_year, cast, crew = run_with_timeout(fetch_movie_info, timeout, temp_filepath, api_key)
         
@@ -39,7 +45,7 @@ def process_movie_data(json_data: dict, cache_folder: str = 'temp', timeout: int
             "cast": cast,
             "crew": crew
         }
-        
+        print(movie_data)
         # Define output filename
         output_filename = f"{video_title}_meta_data.json"
         output_filepath = os.path.join(output_folder, output_filename)

@@ -6,22 +6,46 @@ import signal
 import sys
 
 # 특정 함수에만 타임아웃 적용하는 함수
+# def run_with_timeout(func, timeout, *args, **kwargs):
+#     """ 특정 함수 실행을 지정된 시간(초) 동안 제한하는 래퍼 함수 """
+#     def timeout_handler(signum, frame):
+#         raise TimeoutError
+    
+#     signal.signal(signal.SIGALRM, timeout_handler)  # 타임아웃 핸들러 설정
+#     signal.alarm(timeout)  # timeout 초 후 SIGALRM 발생
+    
+#     try:
+#         result = func(*args, **kwargs)  # 원래 함수 실행
+#     except TimeoutError:
+#         return None, None, [], []  # 타임아웃 발생 시 None 반환
+#     finally:
+#         signal.alarm(0)  # 함수 실행이 끝나면 타이머 해제 (필수)
+    
+#     return result
+import threading
+
 def run_with_timeout(func, timeout, *args, **kwargs):
     """ 특정 함수 실행을 지정된 시간(초) 동안 제한하는 래퍼 함수 """
-    def timeout_handler(signum, frame):
-        raise TimeoutError
-    
-    signal.signal(signal.SIGALRM, timeout_handler)  # 타임아웃 핸들러 설정
-    signal.alarm(timeout)  # timeout 초 후 SIGALRM 발생
-    
-    try:
-        result = func(*args, **kwargs)  # 원래 함수 실행
-    except TimeoutError:
-        return None, None, [], []  # 타임아웃 발생 시 None 반환
-    finally:
-        signal.alarm(0)  # 함수 실행이 끝나면 타이머 해제 (필수)
-    
-    return result
+    result = [None]  # 리스트로 감싸서 내부에서 변경 가능하도록 함
+    exception = [None]  # 예외 저장용
+
+    def wrapper():
+        try:
+            result[0] = func(*args, **kwargs)  # 원래 함수 실행
+        except Exception as e:
+            exception[0] = e  # 예외 저장
+
+    thread = threading.Thread(target=wrapper)
+    thread.start()
+    thread.join(timeout)  # 타임아웃 시간 동안 대기
+
+    if thread.is_alive():  # 타임아웃이 발생하면
+        return None, None, [], []  # 타임아웃 시 None 반환
+
+    if exception[0]:  # 내부에서 예외 발생 시 다시 던지기
+        raise exception[0]
+
+    return result[0]
 
 # TMDB API를 사용하여 영화 제목과 연도를 기반으로 영화 ID를 검색
 def get_movie_id(api_key, movie_title, movie_year=None):
