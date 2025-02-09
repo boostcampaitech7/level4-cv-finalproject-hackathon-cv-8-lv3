@@ -5,12 +5,26 @@ import os
 import uuid
 from whisper import load_model
 from whisper.audio import load_audio
+import logging
+import hashlib
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 모델 초기화 
 model = load_model("turbo", device="cuda", download_root=None)
 
 app = Flask(__name__)
 swagger = Swagger(app)
+
+def get_file_hash(video_file):
+    """파일 내용을 SHA-256 해시로 변환"""
+    hasher = hashlib.sha256()
+    video_file.seek(0)  # 파일 포인터를 처음으로 이동
+    while chunk := video_file.read(8192):  # 8KB씩 읽기
+        hasher.update(chunk)
+    video_file.seek(0)  # 다시 처음으로 이동 (중요!)
+    return hasher.hexdigest()
 
 def get_stt_caption(video_path: str) -> list:
     """
@@ -338,6 +352,8 @@ def upload_video():
             return jsonify({"error": "비디오 파일이 필요합니다"}), 400
             
         video_file = request.files['video']
+        filename = request.form.get('file_name')
+        logger.info(f"filename: ${filename}")
         if video_file.filename == '':
             return jsonify({"error": "선택된 파일이 없습니다"}), 400
             
@@ -346,19 +362,27 @@ def upload_video():
         file_extension = os.path.splitext(video_file.filename)[1].lower()
         if file_extension not in allowed_extensions:
             return jsonify({"error": "지원하지 않는 비디오 형식입니다. mp4, avi, mov, wmv 파일만 허용됩니다."}), 400
-            
+        
+        if not filename:
+          logger.info('전달받은 filename이 없습니다.')
+          filename = str(get_file_hash(video_file)) + file_extension
+        elif not filename.endswith(file_extension):
+          filename += file_extension
+        
         # 저장 디렉토리 설정 및 생성
         save_dir = '/data/ephemeral/home/new-data/'
         os.makedirs(save_dir, exist_ok=True)
         
-        # 고유한 파일명 생성 (확장자 중복 제거)
-        filename = str(uuid.uuid4()) + file_extension
         file_path = os.path.join(save_dir, filename)
         
         # 파일 저장 전 용량 체크
         video_file.seek(0, 2)  # 파일 끝으로 이동
         file_size = video_file.tell()  # 현재 위치(파일 크기) 확인
         video_file.seek(0)  # 파일 포인터를 다시 처음으로
+        
+        if file_size == 0:
+          os.remove(file_path)
+          return jsonify({"error": "파일이 비어있습니다. 다시 업로드 해주세요."}), 500
         
         # 파일 크기 제한 (예: 500MB)
         if file_size > 500 * 1024 * 1024:
@@ -370,6 +394,7 @@ def upload_video():
         if not os.path.exists(file_path):
             return jsonify({"error": "파일 저장에 실패했습니다"}), 500
             
+        logger.info(f"업로드 된 파일 명 : ${file_path}")
         return jsonify({
             "video_path": file_path,
             "message": "파일이 성공적으로 업로드되었습니다",
