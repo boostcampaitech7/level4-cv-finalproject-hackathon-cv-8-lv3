@@ -165,7 +165,7 @@ function TextToVideoSearch() {
               const isExpanded = expandedCaptions[computedVideoId];
 
               return (
-                <VideoWrapper key={computedVideoId}>
+                <VideoWrapper key={computedVideoId + index}>
                   <VideoId>
                     <strong>Video ID: </strong> {computedVideoId}
                   </VideoId>
