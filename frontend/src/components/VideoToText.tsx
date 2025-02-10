@@ -91,6 +91,17 @@ function VideoToTextSearch() {
     }
   };
 
+  const handleVideoTypeChange = (type: 'unseen' | 'seen') => {
+    setVideoType(type);
+    setVideoId('');
+    setVideoFile(null);
+    setVideoCaptions([]);
+    setSttCaptions([]);
+    setStartTime('');
+    setEndTime('');
+    setError(null);
+  };
+
   const handleSearch = async () => {
     try {
       setIsLoading(true);
@@ -162,7 +173,7 @@ function VideoToTextSearch() {
             type="radio"
             value="unseen"
             checked={videoType === 'unseen'}
-            onChange={() => setVideoType('unseen')}
+            onChange={() => handleVideoTypeChange('unseen')}
           />
           새로운 비디오
         </RadioLabel>
@@ -171,7 +182,7 @@ function VideoToTextSearch() {
             type="radio"
             value="seen"
             checked={videoType === 'seen'}
-            onChange={() => setVideoType('seen')}
+            onChange={() => handleVideoTypeChange('seen')}
           />
           기존 비디오
         </RadioLabel>
