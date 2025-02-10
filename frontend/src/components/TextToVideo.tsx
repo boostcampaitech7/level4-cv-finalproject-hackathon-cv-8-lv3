@@ -19,6 +19,12 @@ const ResultContainer = styled.div`
   margin-top: ${({ theme }) => theme.spacing.large};
 `;
 
+const ResultGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: ${({ theme }) => theme.spacing.medium};
+`;
+
 const VideoWrapper = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.primary};
   border-radius: ${({ theme }) => theme.borderRadius};
@@ -54,11 +60,31 @@ const VideoId = styled.p`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-const Caption = styled.p`
+const Caption = styled.div`
   font-size: ${({ theme }) => theme.fontSizes.medium};
   line-height: 1.5;
   margin: 0;
   color: ${({ theme }) => theme.colors.text};
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+`;
+
+const CaptionText = styled.p`
+  margin: 0;
+  padding: ${({ theme }) => theme.spacing.small} 0;
+`;
+
+const ExpandButton = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.colors.primary};
+  cursor: pointer;
+  padding: ${({ theme }) => theme.spacing.small};
+  font-size: ${({ theme }) => theme.fontSizes.small};
+  
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 function TextToVideoSearch() {
@@ -67,6 +93,7 @@ function TextToVideoSearch() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<{ video_id: string, metadata: any, distance: number }[]>([]);
+  const [expandedCaptions, setExpandedCaptions] = useState<{[key: string]: boolean}>({});
 
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -78,6 +105,13 @@ function TextToVideoSearch() {
       setVideoFiles([file]);
       setError(null);
     }
+  };
+
+  const toggleCaption = (videoId: string) => {
+    setExpandedCaptions(prev => ({
+      ...prev,
+      [videoId]: !prev[videoId]
+    }));
   };
 
   const handleSearch = async () => {
@@ -115,19 +149,15 @@ function TextToVideoSearch() {
     }
   };
 
-  // video_path를 이용해서 Express 서버에서 제공하는 URL로 변환하는 함수
   const getVideoURL = (video_path: string): string => {
-    // movie_clips 경로로 시작하면
     if (video_path.startsWith('/data/ephemeral/home/movie_clips')) {
       const filename = video_path.replace('/data/ephemeral/home/movie_clips/', '');
       return `http://localhost:3002/videos/movie_clips/${filename}`;
     }
-    // new-data 경로로 시작하면
     if (video_path.startsWith('/data/ephemeral/home/new-data')) {
       const filename = video_path.replace('/data/ephemeral/home/new-data/', '');
       return `http://localhost:3002/videos/new-data/${filename}`;
     }
-    // 그 외의 경우 빈 문자열 반환
     return '';
   };
 
@@ -162,38 +192,41 @@ function TextToVideoSearch() {
       {results.length > 0 && (
         <div>
           <Title>Search Results</Title>
-          <ResultContainer>
+          <ResultGrid>
             {results.map((result, index) => {
               const { captions, start, end, video_path } = result.metadata;
+              const computedVideoId = video_path.split('/').pop()?.replace('.mp4', '') || result.video_id;
               const formattedStart = new Date(start * 1000)
                 .toISOString()
                 .substr(11, 8);
               const formattedEnd = new Date(end * 1000)
                 .toISOString()
                 .substr(11, 8);
-
-              // video_path에 따라 동영상 URL을 동적으로 생성
               const videoURL = getVideoURL(video_path);
+              const isExpanded = expandedCaptions[result.video_id];
 
               return (
                 <VideoWrapper key={result.video_id}>
                   <VideoId>
-                    <strong>Video ID: </strong> {result.video_id}
+                    <strong>Video ID: </strong> {computedVideoId}
                   </VideoId>
                   <Caption>
-                    <strong>Scene {index + 1}:</strong> {captions}
+                    <CaptionText>
+                      <strong>Scene {index + 1}:</strong>{' '}
+                      {isExpanded ? captions : captions.slice(0, 100) + '...'}
+                    </CaptionText>
+                    <ExpandButton onClick={() => toggleCaption(result.video_id)}>
+                      {isExpanded ? '접기' : '펼치기'}
+                    </ExpandButton>
                   </Caption>
                   <Timestamp>
                     ⏱ {formattedStart} - {formattedEnd}
                   </Timestamp>
                   <VideoClip
                     controls
-                    // 동영상 메타데이터가 로드되면 시작 시간으로 이동
                     onLoadedMetadata={(e) => {
-                      // 재생 시작 시간을 검색 결과의 start 값으로 설정
                       e.currentTarget.currentTime = start;
                     }}
-                    // 현재 재생 시간이 end 시간 이상이면 정지
                     onTimeUpdate={(e) => {
                       if (e.currentTarget.currentTime >= end) {
                         e.currentTarget.pause();
@@ -205,7 +238,7 @@ function TextToVideoSearch() {
                 </VideoWrapper>
               );
             })}
-          </ResultContainer>
+          </ResultGrid>
         </div>
       )}
     </Container>
