@@ -1,23 +1,13 @@
-import type React from 'react';
 import { useState } from 'react';
 import {
   Container,
   Title,
   Input,
   Button,
-  FileInputWrapper,
-  FileInput,
 } from '../styles/SharedStyles';
 import styled from 'styled-components';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
-
-const ResultContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.medium};
-  margin-top: ${({ theme }) => theme.spacing.large};
-`;
 
 const ResultGrid = styled.div`
   display: grid;
@@ -89,23 +79,10 @@ const ExpandButton = styled.button`
 
 function TextToVideoSearch() {
   const [query, setQuery] = useState('');
-  const [videoFiles, setVideoFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<{ video_id: string, metadata: any, distance: number }[]>([]);
   const [expandedCaptions, setExpandedCaptions] = useState<{[key: string]: boolean}>({});
-
-  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const file = e.target.files[0];
-      if (file.size > 100 * 1024 * 1024) {
-        alert('파일 크기는 100MB를 초과할 수 없습니다.');
-        return;
-      }
-      setVideoFiles([file]);
-      setError(null);
-    }
-  };
 
   const toggleCaption = (videoId: string) => {
     setExpandedCaptions(prev => ({
@@ -124,8 +101,6 @@ function TextToVideoSearch() {
     setError(null);
 
     try {
-      console.log('Searching for:', query, videoFiles);
-
       const response = await fetch(`${SERVER_URL}/search_videos`, {
         method: 'POST',
         headers: {
@@ -171,18 +146,6 @@ function TextToVideoSearch() {
         onChange={(e) => setQuery(e.target.value)}
       />
 
-      <FileInputWrapper htmlFor="videoFiles">
-        {videoFiles.length > 0
-          ? `${videoFiles.length} files selected`
-          : 'Select video files'}
-      </FileInputWrapper>
-      <FileInput
-        id="videoFiles"
-        type="file"
-        onChange={handleFilesChange}
-        multiple
-        accept="video/mp4, video/mpeg"
-      />
       <Button onClick={handleSearch} disabled={isLoading}>
         {isLoading ? 'Searching...' : 'Search'}
       </Button>
