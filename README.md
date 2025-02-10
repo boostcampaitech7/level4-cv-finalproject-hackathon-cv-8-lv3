@@ -15,10 +15,18 @@ ssh -i cv-08.pem -p 31578 root@10.28.224.136
 
 2. tmux 세션에 접속
 
-- Frontend 서버 접속
+터미널 2개를 열고 각각의 서버에 접속합니다.
+
+- 터미널 1번 : Frontend 서버 접속
 
 ```
 tmux attach -t frontend-0
+```
+
+- 터미널 2번 : Frontend Video 서버 접속
+
+```
+tmux attach -t front-vid-server-0
 ```
 
 <br />
