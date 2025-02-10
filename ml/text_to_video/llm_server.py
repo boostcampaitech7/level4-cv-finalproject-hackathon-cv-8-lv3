@@ -115,6 +115,7 @@ Query Text: {query_text}
 }}
 
 주의사항:
+- 모든 필드의 텍스트는 무조건 영어로 번역해서 출력할 것
 - 키워드가 없는 경우 중요도 1점 부여
 - "~장면" 형태의 표현은 제외
 """
@@ -140,6 +141,11 @@ def analyze_query(query_text):
         
         try:
             response = model.generate_content(prompt)
+            
+            if not response.text:
+                key_manager.get_next_key()
+                return analyze_query(query_text)
+            
             json_pattern = r'\{[^{}]*\}'
             json_match = re.search(json_pattern, response.text)
             
@@ -349,4 +355,4 @@ def translate():
         return jsonify({"error": f"번역 중 오류 발생: {str(e)}"}), 500
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=30896)
+    app.run(host='0.0.0.0', port=30896, debug=True)
