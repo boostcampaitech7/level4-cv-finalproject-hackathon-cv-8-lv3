@@ -8,7 +8,7 @@
 1. SSH로 서버에 접속
 
 ```
-ssh user@10.28.224.136 -p 30936
+ssh -i cv-08.pem -p 31578 root@10.28.224.136
 ```
 
 <br />
@@ -49,7 +49,7 @@ http://localhost:3000
 
 ✅ 기존 비디오 활용
 
-/data/ephemeral/home/movie_clips에 저장된 영상의 ID를 입력
+/data/ephemeral/home/movie_clips에 저장된 영상의 ID를 입력 (e.g, _8LrZ4NhPmk) <br />
 타임스탬프를 입력하여 원하는 부분을 선택
 
 <br />
