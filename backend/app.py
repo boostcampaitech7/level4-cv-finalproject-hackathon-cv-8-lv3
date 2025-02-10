@@ -792,7 +792,6 @@ def search_videos():
             query_analysis = llm_response.json()['result']
             print("query_analysis", query_analysis)
             
-            
             # 비디오 필드와 중요도 추출
             video_field = query_analysis.get('video_field', '')
             video_importance = query_analysis.get('video_field_importance', 0)
@@ -805,6 +804,22 @@ def search_videos():
             unique_fields = query_analysis.get('unique_field', [])
             unique_importance = query_analysis.get('unique_field_importance', [])
             
+            # 모든 필드가 비어있는 경우 원본 검색어로 검색
+            if not video_field and not stt_fields and not unique_fields:
+                video_response = requests.post(
+                    f"{API_ENDPOINTS['vectordb']}/query",
+                    json={"input_text": data['text']}
+                )
+                stt_response = requests.post(
+                    f"{API_ENDPOINTS['vectordb']}/query_audio", 
+                    json={"input_text": data['text']}
+                )
+                final_results = rank_search_results(
+                    video_response.json() if video_response.status_code == 200 else [],
+                    stt_response.json() if stt_response.status_code == 200 else [],
+                    []
+                )
+                return jsonify({"results": final_results})
             
             # 비디오 검색
             video_results = []

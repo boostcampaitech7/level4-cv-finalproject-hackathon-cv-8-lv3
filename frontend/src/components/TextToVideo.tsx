@@ -99,6 +99,7 @@ function TextToVideoSearch() {
 
     setIsLoading(true);
     setError(null);
+    setResults([]);
 
     try {
       const response = await fetch(`${SERVER_URL}/search_videos`, {
