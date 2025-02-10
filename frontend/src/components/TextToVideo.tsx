@@ -159,29 +159,32 @@ function TextToVideoSearch() {
             {results.map((result, index) => {
               const { captions, start, end, video_path } = result.metadata;
               const computedVideoId = video_path.split('/').pop()?.replace('.mp4', '') || result.video_id;
-              const formattedStart = new Date(start * 1000)
-                .toISOString()
-                .substr(11, 8);
-              const formattedEnd = new Date(end * 1000)
-                .toISOString()
-                .substr(11, 8);
+              const formattedStart = new Date(start * 1000).toISOString().substr(11, 8);
+              const formattedEnd = new Date(end * 1000).toISOString().substr(11, 8);
               const videoURL = getVideoURL(video_path);
-              const isExpanded = expandedCaptions[result.video_id];
+              const isExpanded = expandedCaptions[computedVideoId];
 
               return (
-                <VideoWrapper key={result.video_id}>
+                <VideoWrapper key={computedVideoId}>
                   <VideoId>
                     <strong>Video ID: </strong> {computedVideoId}
                   </VideoId>
-                  <Caption>
-                    <CaptionText>
-                      <strong>Scene {index + 1}:</strong>{' '}
-                      {isExpanded ? captions : captions.slice(0, 100) + '...'}
-                    </CaptionText>
-                    <ExpandButton onClick={() => toggleCaption(result.video_id)}>
-                      {isExpanded ? '접기' : '펼치기'}
+                  
+                  {isExpanded ? (
+                    <Caption>
+                      <CaptionText>
+                        <strong>Scene {index + 1}:</strong> {captions}
+                      </CaptionText>
+                      <ExpandButton onClick={() => toggleCaption(computedVideoId)}>
+                        캡션 접기
+                      </ExpandButton>
+                    </Caption>
+                  ) : (
+                    <ExpandButton onClick={() => toggleCaption(computedVideoId)}>
+                      캡션 펼치기
                     </ExpandButton>
-                  </Caption>
+                  )}
+
                   <Timestamp>
                     ⏱ {formattedStart} - {formattedEnd}
                   </Timestamp>
