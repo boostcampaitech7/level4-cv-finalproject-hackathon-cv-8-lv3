@@ -5,14 +5,7 @@ from google.api_core import exceptions
 
 class GeminiAPI:
     def __init__(self):
-        self.api_keys = [
-            'AIzaSyC7HGza5lq5QYSvEGttahwYvrVfrfbvLZo',
-            'AIzaSyA3Xyrg_9w9X3-WGJ9CO2q2DzZz0Pb860M',
-            'AIzaSyCRkzB7RjCjTPrJR722ohbNSTk_VbdGt8E',
-            'AIzaSyB_lK_59BlFSvB5LuPvLJtV1jDPkdZxH0U',
-            'AIzaSyCyEjuT1hGmeCmJgMdPAAFjS9TeGk2Fv-c',
-            'AIzaSyCJfSgjOe6R81GSi5Tc4YLWFXWIs1MgFfI'
-        ]
+        self.api_keys = ['API_KEY']
         self.current_key_index = 0
         self.setup_api()
 
