@@ -48,7 +48,7 @@ def generate_video_captions(video_file_path, api_key):
 
 if __name__ == "__main__":
     video_path = "/data/ephemeral/home/YouTube-8M/youtube_1.mp4"
-    api_key = "AIzaSyCuadcShzS4VInscqtEX2lOaUAwxAyU1uc"
+    api_key = "API_KEY"
     
     result = generate_video_captions(video_path, api_key)
     print(result)
