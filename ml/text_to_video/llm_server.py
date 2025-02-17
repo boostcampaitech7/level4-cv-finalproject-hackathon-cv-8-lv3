@@ -45,35 +45,7 @@ class APIKeyManager:
         self.last_request_time = time.time()
 
 # API 키 목록 설정
-API_KEYS = [
-    "AIzaSyCtO_hPfpGYF9Q2Vi0FjfnByqUrBNV-PqY",
-    "AIzaSyBYHTkN4SuxjWf5Knt-Y1xmMBosEGjNLrk",
-    "AIzaSyDLXQIy5OP0Byjkl0cVSJ91AIJkG2menME",
-    "AIzaSyBww2IRHZ1-2elZLGsxtz9kEZn2qz3VnYs",
-    "AIzaSyCs_3dC3zhUJfzog0pjCDw5Groodh3SKI8",
-    "AIzaSyCJfSgjOe6R81GSi5Tc4YLWFXWIs1MgFfI",
-    "AIzaSyBdjvAnrFSgyUi-mlb9GtRE9y_QGfqSFFc",
-    "AIzaSyAhzqGgv4rOh13peUnYRVvTbeG-gPMbozI",
-    "AIzaSyAjzl5w-B7ag_zaAFVuUHXDjrmLkOAKLlM",
-    "AIzaSyAbNGQsybrGBwDDN6OUeB2jalBvPdVxADA",
-    "AIzaSyCyEjuT1hGmeCmJgMdPAAFjS9TeGk2Fv-c",
-    "AIzaSyC7HGza5lq5QYSvEGttahwYvrVfrfbvLZo",
-    "AIzaSyA3Xyrg_9w9X3-WGJ9CO2q2DzZz0Pb860M",
-    "AIzaSyCRkzB7RjCjTPrJR722ohbNSTk_VbdGt8E",
-    "AIzaSyB_lK_59BlFSvB5LuPvLJtV1jDPkdZxH0U",
-    "AIzaSyC1Z65g497f_NwNJ-JpZ8C4933JL4x-V0I",
-    "AIzaSyDu8raGye8WgW8MyeCLZ1dEzJ0jr4wZIv0",
-    "AIzaSyAY6kdmJzu2_MROiivXpvpyidtTkfl5CzU",
-    "AIzaSyAtpsptOmKAAKtaAea5F21xTenke1-vfxI",
-    "AIzaSyDi0aSKwsh1u53TWEfnzsg5XmO5HGppRMY",
-    "AIzaSyAPR3HM4CqTQ2fOmu6SMyREDn99sF-QkTA",
-    "AIzaSyA1L96aw2WTj8VqwjzNnvLn8oi8ze1SBTE",
-    "AIzaSyDVtS9rJ3XD9s-EcyH8b9K6h-dysC0t3Xw",
-    "AIzaSyBQdX2yEfymgPqYnda6x3ugqW7V90shsS0",
-    "AIzaSyCK3IQzks76SJb-4o1l1HDvA-dYa-PTnlY",
-    "AIzaSyCVtuztP6jjwfPBgeXyT8YGV3A-pthA11A",
-    "AIzaSyAg0Xrfx4zy6zwR78MYhWq_Z_whFOaoux0"
-]
+API_KEYS = ['API_KEY']
 
 # API 키 매니저 초기화
 key_manager = APIKeyManager(API_KEYS)
