@@ -6,8 +6,7 @@ from tqdm import tqdm
 
 def create_dataset():
     # API 키 설정
-    api_key = ['AIzaSyAbNGQsybrGBwDDN6OUeB2jalBvPdVxADA', 'AIzaSyB4LNSbf8K4z6ZxBRPamihk5tyYI5k2IS0', 'AIzaSyCyEjuT1hGmeCmJgMdPAAFjS9TeGk2Fv-c', 'AIzaSyC7HGza5lq5QYSvEGttahwYvrVfrfbvLZo', 'AIzaSyA3Xyrg_9w9X3-WGJ9CO2q2DzZz0Pb860M', 'AIzaSyCRkzB7RjCjTPrJR722ohbNSTk_VbdGt8E', 'AIzaSyB_lK_59BlFSvB5LuPvLJtV1jDPkdZxH0U', 'AIzaSyC1Z65g497f_NwNJ-JpZ8C4933JL4x-V0I', 'AIzaSyDu8raGye8WgW8MyeCLZ1dEzJ0jr4wZIv0', 'AIzaSyAY6kdmJzu2_MROiivXpvpyidtTkfl5CzU', 'AIzaSyAtpsptOmKAAKtaAea5F21xTenke1-vfxI', 'AIzaSyDi0aSKwsh1u53TWEfnzsg5XmO5HGppRMY', 'AIzaSyAPR3HM4CqTQ2fOmu6SMyREDn99sF-QkTA', 'AIzaSyA1L96aw2WTj8VqwjzNnvLn8oi8ze1SBTE', 'AIzaSyDVtS9rJ3XD9s-EcyH8b9K6h-dysC0t3Xw', 'AIzaSyBQdX2yEfymgPqYnda6x3ugqW7V90shsS0', 'AIzaSyCK3IQzks76SJb-4o1l1HDvA-dYa-PTnlY', 'AIzaSyCVtuztP6jjwfPBgeXyT8YGV3A-pthA11A']
-    # api_key = ['AIzaSyCuadcShzS4VInscqtEX2lOaUAwxAyU1uc', 'AIzaSyAhzqGgv4rOh13peUnYRVvTbeG-gPMbozI', 'AIzaSyCJfSgjOe6R81GSi5Tc4YLWFXWIs1MgFfI', 'AIzaSyCs_3dC3zhUJfzog0pjCDw5Groodh3SKI8', 'AIzaSyDLXQIy5OP0Byjkl0cVSJ91AIJkG2menME', 'AIzaSyBCyMsV7J3_PWxKWiyCu_d0NwCZOgj8yPk']
+    api_key = ['API_KEY']
     # 비디오 파일이 있는 디렉토리 경로
     video_dir = "/data/ephemeral/home/tmp"
     
